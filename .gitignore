@@ -1,1 +1,11 @@
-/pbs_project
+# 1. 테라폼 바이너리 폴더 (제일 무거운 놈 - 무시 대상)
+**/.terraform/
+
+# 2. 테라폼 상태 파일 (보안 정보 포함 - 절대 올리면 안 됨)
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# 3. 윈도우 시스템 파일
+thumbs.db
+.DS_Store
