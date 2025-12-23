@@ -1,0 +1,46 @@
+name: PBS_2 CI Pipeline (Build Only Mode)
+
+on:
+  push:
+    branches: [ "main" ] # 메인 브랜치에 코드가 올라오면 요정이 움직입니다.
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest # 깃허브가 무료로 빌려주는 컴퓨터입니다.
+    
+    steps:
+    - name: 1. 설계도(코드) 가져오기
+      uses: actions/checkout@v4
+
+    - name: 2. AWS 신분증 확인
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-2 
+
+    - name: 3. AWS ECR 창고 로그인 테스트
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: 4. Docker 이미지 빌드 (도시락 싸기)
+      run: |
+        REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        REPOSITORY=${{ secrets.ECR_REPOSITORY }}
+        IMAGE_TAG=${{ github.sha }}
+        
+        # 실제 이미지를 생성하지만, 업로드는 하지 않아 비용이 발생하지 않습니다.
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        echo "✅ 빌드 성공! 설계도에 문제가 없습니다."
+
+    # ---------------------------------------------------------
+    # ⚠️ 비용 방지를 위해 Push 명령은 주석 처리(##) 되어 있습니다.
+    # 나중에 제출 직전에 ##만 지우면 실제로 전송됩니다.
+    # ---------------------------------------------------------
+    - name: 5. 이미지 전송 테스트 (Skip)
+      run: |
+        echo "📢 현재는 비용 절감 모드입니다. Push를 수행하지 않습니다."
+        ## REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        ## REPOSITORY=${{ secrets.ECR_REPOSITORY }}
+        ## IMAGE_TAG=${{ github.sha }}
+        ## docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
