@@ -26,3 +26,33 @@ module "secrets_manager" {
   name = var.project_name
   kms_key_id = module.kms.key_id
 }
+module "rds" {
+  source = "./modules/rds"
+
+  name = var.project_name
+  vpc_id = module.vpc.vpc_id
+
+  # DB 전용 서브넷에 넣음
+  subnets    = module.vpc.database_subnets 
+  
+  # DB 전용 보안그룹 적용
+  sg_id      = module.sg.rds_sg_id         
+  
+  # 아까 만든 비밀번호 금고 주소 전달
+  secret_arn = module.secrets_manager.secret_arn
+}
+# 6. IAM (EC2 권한 관리)
+module "iam" {
+  source = "./modules/iam"
+  name   = var.project_name
+}
+
+# 7. Bastion Host (관리용 서버)
+module "bastion" {
+  source = "./modules/bastion"
+
+  name                 = var.project_name
+  vpc_id               = module.vpc.vpc_id
+  subnet_id            = module.vpc.public_subnets[0] # 첫 번째 퍼블릭 서브넷에 배치
+  iam_instance_profile = module.iam.instance_profile_name
+}
