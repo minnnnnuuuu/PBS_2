@@ -40,6 +40,11 @@ module "rds" {
   
   # 아까 만든 비밀번호 금고 주소 전달
   secret_arn = module.secrets_manager.secret_arn
+
+  # Secrets Manager가 비밀번호 생성을 완전히 끝낼 때까지 RDS 생성을 대기시킴.
+  # secrets manager 모듈이 secret(pw 금고)를 만들고 비밀번호를 넣는 중, RDS 모듈이 secret에 pw를 요구하여, 데이터 조회시도
+  # But pw가 아직 저장되지 않았거나 secret이 완전히 준비되지 않아서, 리소스를 찾을 수 없는 에러
+  depends_on = [module.secrets_manager]
 }
 # 6. IAM (EC2 권한 관리)
 module "iam" {

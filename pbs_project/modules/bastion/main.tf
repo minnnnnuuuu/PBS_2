@@ -38,5 +38,7 @@ resource "aws_instance" "bastion" {
   iam_instance_profile   = var.iam_instance_profile # 아까 만든 신분증 착용
   vpc_security_group_ids = [aws_security_group.bastion_sg.id]
 
+  associate_public_ip_address = true
+
   tags = { Name = "${var.name}-bastion" }
 }
