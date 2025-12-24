@@ -3,3 +3,4 @@
 project_name = "pbs-project"
 region       = "ap-northeast-2"
 vpc_cidr     = "10.0.0.0/18"
+environment = "dev"

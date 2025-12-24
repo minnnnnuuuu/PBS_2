@@ -15,3 +15,7 @@ variable "vpc_cidr" {
   description = "VPC CIDR 블록"
   type        = string
 }
+variable "environment" {
+  description = "배포 환경 (예: dev, prod)"
+  type        = string
+}

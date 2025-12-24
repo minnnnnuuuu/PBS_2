@@ -61,3 +61,24 @@ module "bastion" {
   subnet_id            = module.vpc.public_subnets[0] # 첫 번째 퍼블릭 서브넷에 배치
   iam_instance_profile = module.iam.instance_profile_name
 }
+
+# 8. EFS
+module "efs" {
+  source = "./modules/efs"
+
+  project_name = var.project_name
+  environment  = var.environment
+  
+  vpc_id       = module.vpc.vpc_id
+  
+  # [중요] 아키텍처상 Private Data Subnet에 배치
+  subnet_ids   = module.vpc.database_subnets
+  
+  # KMS 모듈에서 만든 키 사용
+  kms_key_arn  = module.kms.key_arn
+  
+  # EKS 노드 그룹의 보안 그룹 ID (EKS 모듈 또는 SG 모듈 output 참조)
+  # 예: module.eks.node_security_group_id 또는 module.security_group.eks_node_sg_id
+  # node_security_group_ids = [module.eks.node_security_group_id] # eks 만들고 나중에 추가
+  node_security_group_ids = []
+}
