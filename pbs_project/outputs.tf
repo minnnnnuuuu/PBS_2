@@ -1,3 +1,4 @@
+# pbs_project/outputs.tf
 # ==========================================
 # 1. 🌐 네트워크 (VPC) - 5개 전부 출력!
 # ==========================================
@@ -77,4 +78,40 @@ output "bastion_instance_id" {
 output "bastion_public_ip" {
   description = "베스천 공인 IP"
   value       = module.bastion.public_ip
+}
+
+# 6. EKS & EFS 정보 (팀원 요청 사항)
+# ==========================================
+
+output "cluster_name" {
+  description = "EKS 클러스터 이름"
+  value       = module.eks.cluster_name
+}
+
+output "cluster_endpoint" {
+  description = "EKS 접속 주소 (Endpoint)"
+  value       = module.eks.cluster_endpoint
+}
+
+# 팀원이 가장 중요하게 요청한 EFS ID
+output "efs_id" {
+  description = "EFS 파일 시스템 ID (fs-xxxx)"
+  value       = module.efs.id
+}
+
+# (참고) EKS 모듈의 outputs.tf에 아래 값들이 정의되어 있어야 에러가 안 납니다!
+# output "cluster_iam_role_arn" {
+#   value = module.eks.cluster_iam_role_arn
+# }
+
+
+# 요청 사항 (Role ARN 정보)
+output "cluster_role_arn" {
+  description = "EKS Cluster Role ARN"
+  value       = module.eks.cluster_role_arn
+}
+
+output "node_role_arn" {
+  description = "EKS Node Role ARN"
+  value       = module.eks.node_role_arn
 }

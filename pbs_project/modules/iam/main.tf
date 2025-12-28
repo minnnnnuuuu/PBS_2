@@ -30,63 +30,14 @@ resource "aws_iam_instance_profile" "bastion_profile" {
   role = aws_iam_role.bastion_role.name
 }
 
-# ---------------------------------------------------------
-# 2. [추가] EKS Cluster Role (컨트롤 플레인용)
-# ---------------------------------------------------------
-resource "aws_iam_role" "eks_cluster_role" {
-  name = "${var.name}-eks-cluster-role"
+# 2. [필수] EKS 노드 그룹용 Service Linked Role (계정당 1개)
+# =========================================================
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
+# [추가] "이미 있으면 가져와!" 라고 코드로 명시하는 부분
 
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.eks_cluster_role.name
-}
 
-# ---------------------------------------------------------
-# 3. [추가] EKS Node Group Role (워커 노드용)
-# ---------------------------------------------------------
-resource "aws_iam_role" "eks_node_role" {
-  name = "${var.name}-eks-node-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# 워커 노드 필수 정책 3가지 연결
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_node_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_node_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_read_only" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_node_role.name
+# 이 역할은 계정 전체에 딱 하나만 있어야 하므로, 
+# EKS 모듈(여러 번 생성 가능)에 넣지 않고 여기서 관리합니다.
+resource "aws_iam_service_linked_role" "eks_nodegroup" {
+  aws_service_name = "eks-nodegroup.amazonaws.com"
 }

@@ -1,6 +1,6 @@
 # 생성된 EFS의 ID (K8s StorageClass 설정 시 필요)
 output "id" {
-  description = "The ID of the EFS file system"
+  description = "The ID of the EFS file system, 생성된 EFS 파일 시스템 ID"
   value       = aws_efs_file_system.this.id
 }
 

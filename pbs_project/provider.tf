@@ -7,6 +7,19 @@ terraform {
       version = "~> 5.0"
     }
   }
+  backend "s3" {
+    # 1. 아까 AWS 콘솔에서 손으로 만든 '그 버킷 이름'을 적으세요.
+    bucket = "pbs-project-tfstate-soldesk-pbs" 
+    
+    # 2. S3 안에 저장될 파일 이름입니다. (이건 그대로 두셔도 됩니다)
+    key    = "terraform.tfstate"
+    
+    # 3. 버킷이 있는 리전 (서울)
+    region = "ap-northeast-2"
+
+    dynamodb_table = "terraform-locks" 
+    encrypt        = true
+  }
 }
 
 provider "aws" {

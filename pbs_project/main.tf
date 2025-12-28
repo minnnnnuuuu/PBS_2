@@ -62,13 +62,12 @@ module "bastion" {
   iam_instance_profile = module.iam.instance_profile_name
 }
 
-# 8. EFS
+# EFS module
 module "efs" {
   source = "./modules/efs"
 
   project_name = var.project_name
   environment  = var.environment
-  
   vpc_id       = module.vpc.vpc_id
   
   # [중요] 아키텍처상 Private Data Subnet에 배치
@@ -79,6 +78,43 @@ module "efs" {
   
   # EKS 노드 그룹의 보안 그룹 ID (EKS 모듈 또는 SG 모듈 output 참조)
   # 예: module.eks.node_security_group_id 또는 module.security_group.eks_node_sg_id
-  # node_security_group_ids = [module.eks.node_security_group_id] # eks 만들고 나중에 추가
-  node_security_group_ids = []
+  node_security_group_ids = [module.eks.node_security_group_id] # eks의 생성 후 sg id 넘길 수 있음
+  
+}
+
+# EKS module
+module "eks" {
+  source = "./modules/eks"
+
+  project_name = var.project_name
+  environment  = var.environment
+  vpc_id       = module.vpc.vpc_id
+  
+  # 노드는 반드시 Private App Subnet에 배치
+  subnet_ids   = module.vpc.private_subnets 
+
+  # IAM 모듈(Role 생성)이 완전히 끝날 때까지 기다렸다가 시작
+  depends_on = [module.iam]
+}
+
+# [필수 요구사항] EFS CSI Driver 자동 설치
+resource "aws_eks_addon" "efs_csi_driver" {
+  # EKS 모듈에서 cluster_name을 뱉어내야 합니다!
+  cluster_name = module.eks.cluster_name 
+  addon_name   = "aws-efs-csi-driver"
+  addon_version = "v2.0.7-eksbuild.1" # 최신 버전 사용 권장
+  
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [module.eks] # 클러스터가 다 만들어진 뒤에 설치
+}
+
+# 이미 설치된 드라이버를 내 테라폼으로 가져와!" (Import)
+import {
+  to = aws_eks_addon.efs_csi_driver
+  
+  # 형식: "클러스터이름:애드온이름"
+  # 아까 에러 로그에 뜬 실제 클러스터 이름을 정확히 넣었습니다.
+  id = "pbs-project-dev-cluster:aws-efs-csi-driver"
 }
