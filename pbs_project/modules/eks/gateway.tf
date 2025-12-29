@@ -1,4 +1,18 @@
-# 1. Gateway API 리소스 (LBC가 이걸 보고 ALB를 만듭니다)
+# 1. Gateway API 사전(CRD) 자동 설치 (null_resource 사용)
+resource "null_resource" "install_gateway_crds" {
+  # 클러스터 정보가 바뀌거나 필요할 때 실행되도록 설정
+  triggers = {
+    cluster_endpoint = aws_eks_cluster.this.endpoint
+    #cluster_endpoint = data.aws_eks_cluster.cluster.endpoint
+  }
+
+  # 테라폼이 직접 kubectl 명령어를 날려 사전을 설치합니다. (100% 자동화)
+  provisioner "local-exec" {
+    command = "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml"
+  }
+}
+
+# 2. Gateway 리소스 생성
 resource "kubernetes_manifest" "pbs_gateway" {
   manifest = {
     apiVersion = "gateway.networking.k8s.io/v1beta1"
@@ -7,12 +21,13 @@ resource "kubernetes_manifest" "pbs_gateway" {
       name      = "pbs-gateway"
       namespace = "kube-system"
       annotations = {
-        # 강현님이 만든 LBC가 이 게이트웨이를 관리하도록 연결
         "alb.networking.k8s.io/scheme" = "internet-facing"
+        
+        "alb.networking.k8s.io/wafv2-acl-arn" = "arn:aws:wafv2:ap-northeast-2:198011705652:regional/webacl/pbs-project-web-acl/51b25950-c51a-4974-8100-e993b35b62d2"
       }
     }
     spec = {
-      gatewayClassName = "amazon-lbc" # LBC용 게이트웨이 클래스
+      gatewayClassName = "amazon-lbc"
       listeners = [{
         name     = "http"
         port     = 80
@@ -21,7 +36,7 @@ resource "kubernetes_manifest" "pbs_gateway" {
       }]
     }
   }
-}
 
-# 2. 강현님 LBC에 옵션이 빠졌을 경우를 대비한 체크 (중요)
-# 강현님 helm_release 부분에 'featureGates = "GatewayAPI=true"'가 있는지 꼭 확인하세요!
+  # ★ 핵심: null_resource(사전 설치)가 끝난 뒤에 대문을 만듭니다.
+  depends_on = [null_resource.install_gateway_crds]
+}

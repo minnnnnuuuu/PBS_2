@@ -9,4 +9,4 @@ resource "kubernetes_storage_class_v1" "efs_sc" {
     fileSystemId     = "fs-0109bfcbcf364ee3e" # 형님이 가진 고유 ID 연결
     directoryPerms   = "700"
   }
-}
+}   

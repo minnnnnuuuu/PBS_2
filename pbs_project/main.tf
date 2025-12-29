@@ -186,7 +186,7 @@ provider "kubernetes" {
 # =================================================================
 # 8. AWS Load Balancer Controller 설치 (Helm Chart)
 # =================================================================
-
+/*
 resource "helm_release" "aws_lbc" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
@@ -228,6 +228,7 @@ resource "helm_release" "aws_lbc" {
     module.vpc
   ]
 }
+*/
 # pbs_project/main.tf 안에 추가
 
 # =================================================================
