@@ -1,4 +1,4 @@
-resource "kubernetes_storage_class" "efs_sc" {
+resource "kubernetes_storage_class_v1" "efs_sc" {
   metadata {
     name = "efs-sc" # 개발자들이 이 이름을 쓸 수 있게 해줘야 합니다.
   }

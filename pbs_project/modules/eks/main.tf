@@ -175,3 +175,54 @@ resource "aws_iam_role_policy_attachment" "lbc_attach" {
   policy_arn = aws_iam_policy.lbc_policy.arn
   role       = aws_iam_role.lbc_role.name
 }
+
+# [178번 라인부터 붙여넣기]
+# =================================================================
+# 7. AWS Load Balancer Controller 설치 (LBC 본체 조립)
+# =================================================================
+
+resource "helm_release" "aws_load_balancer_controller" {
+  name       = "aws-load-balancer-controller"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+
+  # ★ 게이트웨이 기능을 켜는 핵심 스위치 ★
+  set {
+    name  = "featureGates"
+    value = "GatewayAPI=true"
+  }
+
+  set {
+    name  = "clusterName"
+    value = aws_eks_cluster.this.name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.lbc_role.arn
+  }
+
+  set {
+    name  = "region"
+    value = "ap-northeast-2"
+  }
+
+  set {
+    name  = "vpcId"
+    value = var.vpc_id
+  }
+
+  # IAM 권한 설정이 완료된 후에 설치되도록 순서 고정
+  depends_on = [aws_eks_cluster.this, aws_iam_role_policy_attachment.lbc_attach]
+}
