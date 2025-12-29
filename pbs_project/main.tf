@@ -111,6 +111,7 @@ resource "aws_eks_addon" "efs_csi_driver" {
 }
 
 # 이미 설치된 드라이버를 내 테라폼으로 가져와!" (Import)
+# destroy 후 첫 apply 시 import 지우기
 import {
   to = aws_eks_addon.efs_csi_driver
   
