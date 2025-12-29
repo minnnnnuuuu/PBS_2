@@ -34,7 +34,7 @@ module "vpc" {
 
   # NAT Gateway 설정 (Private Subnet이 인터넷 하려면 필수)
   enable_nat_gateway = true
-  single_nat_gateway = true  # 비용 절약용 (실무에선 false로 해서 AZ마다 둠)
+  single_nat_gateway = false  # 비용 절약용 (실무에선 false로 해서 AZ마다 둠)
   
   # DNS 설정 (필수)
   enable_dns_hostnames = true
