@@ -25,3 +25,19 @@ output "node_role_arn" {
   description = "IAM Role ARN for EKS Nodes"
   value       = aws_iam_role.node.arn
 }
+
+# [추가] LBC 설치할 때 필요한 OIDC 정보
+output "oidc_provider_arn" {
+  description = "IAM OIDC Provider ARN"
+  value       = aws_iam_openid_connect_provider.eks.arn
+}
+
+output "oidc_provider_url" {
+  description = "IAM OIDC Provider URL (trimmed)"
+  value       = replace(aws_iam_openid_connect_provider.eks.url, "https://", "")
+}
+
+output "lbc_role_arn" {
+  description = "IAM Role ARN for AWS Load Balancer Controller"
+  value       = aws_iam_role.lbc_role.arn
+}

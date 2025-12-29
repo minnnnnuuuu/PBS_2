@@ -66,6 +66,10 @@ resource "aws_eks_cluster" "this" {
     endpoint_private_access = true
     endpoint_public_access  = true
   }
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
 
   depends_on = [aws_iam_role_policy_attachment.cluster_policy]
 }
@@ -111,4 +115,63 @@ resource "aws_eks_node_group" "this" {
   tags = {
     Name = "${var.project_name}-${var.environment}-worker"
   }
+}
+
+# =================================================================
+# 5. OIDC Provider (쿠버네티스와 AWS IAM의 통역사)
+# =================================================================
+
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.this.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
+}
+
+# =================================================================
+# 6. AWS Load Balancer Controller를 위한 IAM Role (IRSA)
+# =================================================================
+
+# (1) 로드밸런서용 권한 정책(Policy) 다운로드 및 생성
+data "http" "lbc_iam_policy" {
+  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/install/iam_policy.json"
+}
+
+resource "aws_iam_policy" "lbc_policy" {
+  name        = "${var.project_name}-AWSLoadBalancerControllerIAMPolicy"
+  description = "Policy for AWS Load Balancer Controller"
+  policy      = data.http.lbc_iam_policy.response_body
+}
+
+# (2) 역할을 만들고 OIDC(통역사)를 신뢰하도록 설정
+resource "aws_iam_role" "lbc_role" {
+  name = "${var.project_name}-eks-lbc-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud" = "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# (3) 역할에 정책 붙이기
+resource "aws_iam_role_policy_attachment" "lbc_attach" {
+  policy_arn = aws_iam_policy.lbc_policy.arn
+  role       = aws_iam_role.lbc_role.name
 }

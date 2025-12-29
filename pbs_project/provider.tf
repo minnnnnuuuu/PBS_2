@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.9" # 최신 버전 강제
+    }
   }
   backend "s3" {
     # 1. 아까 AWS 콘솔에서 손으로 만든 '그 버킷 이름'을 적으세요.

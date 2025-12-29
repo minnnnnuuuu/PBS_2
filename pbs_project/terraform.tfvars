@@ -4,3 +4,9 @@ project_name = "pbs-project"
 region       = "ap-northeast-2"
 vpc_cidr     = "10.0.0.0/18"
 environment = "dev"
+
+# 여기에 팀원들을 계속 추가하면 됩니다.
+team_members = [
+  "arn:aws:iam::198011705652:user/ssw_soldesk",  # ssw 님
+  "arn:aws:iam::198011705652:user/cgy_soldesk"   # cgy 님
+]

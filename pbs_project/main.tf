@@ -98,24 +98,125 @@ module "eks" {
 }
 
 # [필수 요구사항] EFS CSI Driver 자동 설치
-resource "aws_eks_addon" "efs_csi_driver" {
-  # EKS 모듈에서 cluster_name을 뱉어내야 합니다!
-  cluster_name = module.eks.cluster_name 
-  addon_name   = "aws-efs-csi-driver"
-  addon_version = "v2.0.7-eksbuild.1" # 최신 버전 사용 권장
+#resource "aws_eks_addon" "efs_csi_driver" {
+#  # EKS 모듈에서 cluster_name을 뱉어내야 합니다!
+#  cluster_name = module.eks.cluster_name 
+#  addon_name   = "aws-efs-csi-driver"
+#  addon_version = "v2.0.7-eksbuild.1" # 최신 버전 사용 권장
   
-  resolve_conflicts_on_create = "OVERWRITE"
-  resolve_conflicts_on_update = "OVERWRITE"
+#  resolve_conflicts_on_create = "OVERWRITE"
+#  resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [module.eks] # 클러스터가 다 만들어진 뒤에 설치
-}
+#  depends_on = [module.eks] # 클러스터가 다 만들어진 뒤에 설치
+#}
 
 # 이미 설치된 드라이버를 내 테라폼으로 가져와!" (Import)
 # destroy 후 첫 apply 시 import 지우기
-import {
-  to = aws_eks_addon.efs_csi_driver
+#import {
+#  to = aws_eks_addon.efs_csi_driver
   
   # 형식: "클러스터이름:애드온이름"
   # 아까 에러 로그에 뜬 실제 클러스터 이름을 정확히 넣었습니다.
-  id = "pbs-project-dev-cluster:aws-efs-csi-driver"
+#  id = "pbs-project-dev-cluster:aws-efs-csi-driver"
+#}
+
+
+
+
+# =================================================================
+# [팀원 일괄 등록] terraform.tfvars 파일의 명단을 읽어와 자동 적용
+# =================================================================
+
+# 1. 입장권 발급 (반복문)
+resource "aws_eks_access_entry" "team_members" {
+  # 변수에 있는 명단(set)을 하나씩 꺼내서 반복
+  for_each      = toset(var.team_members)
+  
+  cluster_name  = module.eks.cluster_name
+  principal_arn = each.value # 명단에 있는 ARN 하나씩 대입
+  type          = "STANDARD"
+}
+
+# 2. 관리자 권한 부여 (반복문)
+resource "aws_eks_access_policy_association" "team_members_policy" {
+  for_each      = toset(var.team_members)
+
+  cluster_name  = module.eks.cluster_name
+  principal_arn = each.value
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  # 입장권이 먼저 만들어져야 권한을 줄 수 있음
+  depends_on = [aws_eks_access_entry.team_members]
+}
+
+
+# EKS 클러스터 인증 정보를 가져옴
+# =================================================================
+# 7. Helm Provider 설정 (EKS와 통신하기 위한 설정)
+# =================================================================
+
+data "aws_eks_cluster" "cluster" {
+  name = module.eks.cluster_name
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = module.eks.cluster_name
+}
+
+provider "helm" {
+  kubernetes = {
+    host                   = data.aws_eks_cluster.cluster.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.cluster.token
+  }
+}
+
+# =================================================================
+# 8. AWS Load Balancer Controller 설치 (Helm Chart)
+# =================================================================
+
+resource "helm_release" "aws_lbc" {
+  name       = "aws-load-balancer-controller"
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  namespace  = "kube-system"
+  version    = "1.7.1" # 최신 안정화 버전
+
+  # [수정됨] v3.x 문법 대응: set 블록 대신 리스트(= []) 사용
+  set = [
+    {
+      name  = "clusterName"
+      value = module.eks.cluster_name
+    },
+    {
+      name  = "serviceAccount.create"
+      value = "true"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = "aws-load-balancer-controller"
+    },
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = module.eks.lbc_role_arn
+    },
+    {
+      name  = "region"
+      value = "ap-northeast-2"
+    },
+    {
+      name  = "vpcId"
+      value = module.vpc.vpc_id
+    }
+  ]
+
+  # LBC가 설치되기 전에 EKS와 Role이 먼저 있어야 함
+  depends_on = [
+    module.eks,
+    module.vpc
+  ]
 }

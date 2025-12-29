@@ -19,3 +19,10 @@ variable "environment" {
   description = "배포 환경 (예: dev, prod)"
   type        = string
 }
+
+# [추가] 팀원 권한 관리용 변수
+variable "team_members" {
+  description = "EKS 관리자 권한을 부여할 IAM User ARN 목록"
+  type        = list(string)
+  default     = []
+}
