@@ -115,3 +115,9 @@ output "node_role_arn" {
   description = "EKS Node Role ARN"
   value       = module.eks.node_role_arn
 }
+# pbs_project/outputs.tf 안에 추가
+
+output "waf_arn" {
+  description = "WAF WebACL ARN (Give this to Ingress Team)"
+  value       = module.waf.web_acl_arn
+}

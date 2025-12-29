@@ -228,3 +228,12 @@ resource "helm_release" "aws_lbc" {
     module.vpc
   ]
 }
+# pbs_project/main.tf 안에 추가
+
+# =================================================================
+# 9. WAF (웹 방화벽)
+# =================================================================
+module "waf" {
+  source = "./modules/waf"
+  name   = var.project_name
+}
