@@ -82,6 +82,12 @@ module "efs" {
   
 }
 
+variable "bootstrap_mode" {
+  description = "초기 설치 시 Helm 제외 모드"
+  type        = bool
+  default     = false
+}
+
 # EKS module
 module "eks" {
   source = "./modules/eks"
@@ -159,76 +165,100 @@ resource "aws_eks_access_policy_association" "team_members_policy" {
 # 7. Helm Provider 설정 (EKS와 통신하기 위한 설정)
 # =================================================================
 
-data "aws_eks_cluster" "cluster" {
-  name = module.eks.cluster_name
-}
+#data "aws_eks_cluster" "cluster" {
+#  name = module.eks.cluster_name
+#}
 
 data "aws_eks_cluster_auth" "cluster" {
   name = module.eks.cluster_name
+  # name = module.eks.cluster_name
 }
 
+#========헬름 초안===========
+#provider "helm" {
+#  kubernetes = {
+#    host                   = data.aws_eks_cluster.cluster.endpoint
+#    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+#    token                  = data.aws_eks_cluster_auth.cluster.token
+#  }
+#}
+
+#=============헬름 모듈 변경================
 provider "helm" {
-  kubernetes = {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     token                  = data.aws_eks_cluster_auth.cluster.token
   }
 }
 
-#========1229 pm 0350 추가===========
+#========쿠버 초안===========
+#provider "kubernetes" {
+#  host                   = data.aws_eks_cluster.cluster.endpoint
+#  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+#  token                  = data.aws_eks_cluster_auth.cluster.token
+#}
+#=============쿠버 모듈 변경================
 provider "kubernetes" {
-  host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
   token                  = data.aws_eks_cluster_auth.cluster.token
 }
+
 #========1229 pm 0350 추가===========
 
 # =================================================================
 # 8. AWS Load Balancer Controller 설치 (Helm Chart)
 # =================================================================
-/*
+# pbs_project/main.tf (기존 주석 지우고 이 코드로 대체)
+
 resource "helm_release" "aws_lbc" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-  version    = "1.7.1" # 최신 안정화 버전
+  version    = "1.7.1"
 
-  # [수정됨] v3.x 문법 대응: set 블록 대신 리스트(= []) 사용
-  set = [
-    {
-      name  = "clusterName"
-      value = module.eks.cluster_name
-    },
-    {
-      name  = "serviceAccount.create"
-      value = "true"
-    },
-    {
-      name  = "serviceAccount.name"
-      value = "aws-load-balancer-controller"
-    },
-    {
-      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-      value = module.eks.lbc_role_arn
-    },
-    {
-      name  = "region"
-      value = "ap-northeast-2"
-    },
-    {
-      name  = "vpcId"
-      value = module.vpc.vpc_id
-    }
-  ]
+  # 1. 게이트웨이 기능 활성화 (아까 모듈 안에 있던 설정)
+  set {
+    name  = "featureGates"
+    value = "GatewayAPI=true"
+  }
 
-  # LBC가 설치되기 전에 EKS와 Role이 먼저 있어야 함
-  depends_on = [
-    module.eks,
-    module.vpc
-  ]
+  # 2. 클러스터 이름 (모듈 결과값 참조)
+  set {
+    name  = "clusterName"
+    value = module.eks.cluster_name
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.name"
+    value = "aws-load-balancer-controller"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = module.eks.lbc_role_arn
+  }
+
+  set {
+    name  = "region"
+    value = "ap-northeast-2"
+  }
+
+  set {
+    name  = "vpcId"
+    value = module.vpc.vpc_id
+  }
+
+  # EKS 모듈 생성 후 실행
+  depends_on = [module.eks]
 }
-*/
 # pbs_project/main.tf 안에 추가
 
 # =================================================================
@@ -238,3 +268,6 @@ module "waf" {
   source = "./modules/waf"
   name   = var.project_name
 }
+
+
+

@@ -8,7 +8,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.9" # 최신 버전 강제
+      version = "~> 2.9" # 최신 버전 강제
     }
   }
   backend "s3" {
