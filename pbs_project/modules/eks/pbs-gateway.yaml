@@ -1,0 +1,26 @@
+#----------- 추가된 부분 -----------
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: amazon-lbc
+spec:
+  controllerName: managed.aws.amazon.com/gateway-controller
+---
+#----------------------------------
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: pbs-gateway
+  namespace: kube-system
+  annotations:
+    alb.networking.k8s.io/scheme: internet-facing
+    alb.networking.k8s.io/wafv2-acl-arn: arn:aws:wafv2:ap-northeast-2:198011705652:regional/webacl/pbs-project-web-acl/e6689e62-a84f-40ef-98b0-cb969e39d7f3
+spec:
+  gatewayClassName: amazon-lbc
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All

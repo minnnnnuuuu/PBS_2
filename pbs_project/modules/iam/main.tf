@@ -35,9 +35,19 @@ resource "aws_iam_instance_profile" "bastion_profile" {
 
 # [추가] "이미 있으면 가져와!" 라고 코드로 명시하는 부분
 
+# [수정] 이미 있는지 먼저 확인합니다.
+data "aws_iam_roles" "eks_nodegroup_role_check" {
+  name_regex = "AWSServiceRoleForAmazonEKSNodegroup"
+}
+
+# [수정] 검색 결과가 없을 때만(count = 0일 때) 생성합니다.
+resource "aws_iam_service_linked_role" "eks_nodegroup" {
+  count            = length(data.aws_iam_roles.eks_nodegroup_role_check.names) == 0 ? 1 : 0
+  aws_service_name = "eks-nodegroup.amazonaws.com"
+}
 
 # 이 역할은 계정 전체에 딱 하나만 있어야 하므로, 
 # EKS 모듈(여러 번 생성 가능)에 넣지 않고 여기서 관리합니다.
-resource "aws_iam_service_linked_role" "eks_nodegroup" {
-  aws_service_name = "eks-nodegroup.amazonaws.com"
-}
+#resource "aws_iam_service_linked_role" "eks_nodegroup" {
+#  aws_service_name = "eks-nodegroup.amazonaws.com"
+#}

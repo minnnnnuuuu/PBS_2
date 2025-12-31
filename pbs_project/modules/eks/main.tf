@@ -130,23 +130,109 @@ resource "aws_iam_openid_connect_provider" "eks" {
   thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
   url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }
-
 # =================================================================
 # 6. AWS Load Balancer Controller를 위한 IAM Role (IRSA)
 # =================================================================
 
-# (1) 로드밸런서용 권한 정책(Policy) 다운로드 및 생성
-data "http" "lbc_iam_policy" {
-  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/install/iam_policy.json"
+# (1) 로드밸런서용 권한 정책(Policy) 직접 정의 (URL 다운로드 대신 코드 사용)
+data "aws_iam_policy_document" "lbc_policy_doc" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "elasticloadbalancing:DescribeListenerAttributes", # 아까 에러 났던 범인!
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeLoadBalancerAttributes",
+      "elasticloadbalancing:DescribeListeners",
+      "elasticloadbalancing:DescribeRules",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetGroupAttributes",
+      "elasticloadbalancing:DescribeTargetHealth",
+      "elasticloadbalancing:DescribeTags",
+      "iam:CreateServiceLinkedRole",
+      "ec2:DescribeAccountAttributes",
+      "ec2:DescribeAddresses",
+      "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeInternetGateways",
+      "ec2:DescribeVpcs",
+      "ec2:DescribeSubnets",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DescribeInstances",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeTags",
+      "cognito-idp:DescribeUserPoolClient",
+      "acm:ListCertificates",
+      "acm:DescribeCertificate",
+      "iam:ListServerCertificates",
+      "iam:GetServerCertificate",
+      "waf-regional:GetWebACL",
+      "waf-regional:GetWebACLForResource",
+      "waf-regional:AssociateWebACL",
+      "waf-regional:DisassociateWebACL",
+      "wafv2:GetWebACL",
+      "wafv2:GetWebACLForResource",
+      "wafv2:AssociateWebACL",
+      "wafv2:DisassociateWebACL",
+      "shield:GetSubscriptionState",
+      "shield:DescribeProtection",
+      "shield:CreateProtection",
+      "shield:DeleteProtection"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:CreateSecurityGroup",
+      "ec2:CreateTags",
+      "ec2:DeleteTags",
+      "ec2:DeleteSecurityGroup"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "elasticloadbalancing:CreateLoadBalancer",
+      "elasticloadbalancing:CreateTargetGroup",
+      "elasticloadbalancing:CreateListener",
+      "elasticloadbalancing:CreateRule",
+      "elasticloadbalancing:DeleteLoadBalancer",
+      "elasticloadbalancing:DeleteTargetGroup",
+      "elasticloadbalancing:DeleteListener",
+      "elasticloadbalancing:DeleteRule",
+      "elasticloadbalancing:AddTags",
+      "elasticloadbalancing:RemoveTags",
+      "elasticloadbalancing:ModifyLoadBalancerAttributes",
+      "elasticloadbalancing:ModifyTargetGroup",
+      "elasticloadbalancing:ModifyTargetGroupAttributes",
+      "elasticloadbalancing:ModifyListener",
+      "elasticloadbalancing:ModifyRule",
+      "elasticloadbalancing:SetIpAddressType",
+      "elasticloadbalancing:SetSecurityGroups",
+      "elasticloadbalancing:SetSubnets",
+      "elasticloadbalancing:RegisterTargets",
+      "elasticloadbalancing:DeregisterTargets"
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_policy" "lbc_policy" {
   name        = "${var.project_name}-AWSLoadBalancerControllerIAMPolicy"
   description = "Policy for AWS Load Balancer Controller"
-  policy      = data.http.lbc_iam_policy.response_body
+  # 위에서 정의한 data 소스의 json 결과물을 사용합니다.
+  policy      = data.aws_iam_policy_document.lbc_policy_doc.json
 }
 
-# (2) 역할을 만들고 OIDC(통역사)를 신뢰하도록 설정
+# [178번 라인부터 붙여넣기]
+# =================================================================
+# 7. AWS Load Balancer Controller 설치 (LBC 본체 조립)
+# =================================================================
+# (2) 로드밸런서 전용 역할(Role) 생성 및 OIDC 신뢰 설정
 resource "aws_iam_role" "lbc_role" {
   name = "${var.project_name}-eks-lbc-role"
 
@@ -161,6 +247,7 @@ resource "aws_iam_role" "lbc_role" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
+            # OIDC 주소에서 https://를 제거하고 ServiceAccount와 연결
             "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
             "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud" = "sts.amazonaws.com"
           }
@@ -170,14 +257,8 @@ resource "aws_iam_role" "lbc_role" {
   })
 }
 
-# (3) 역할에 정책 붙이기
+# (3) 역할(Role)에 아까 만든 마스터 열쇠(Policy) 합체
 resource "aws_iam_role_policy_attachment" "lbc_attach" {
   policy_arn = aws_iam_policy.lbc_policy.arn
   role       = aws_iam_role.lbc_role.name
 }
-
-# [178번 라인부터 붙여넣기]
-# =================================================================
-# 7. AWS Load Balancer Controller 설치 (LBC 본체 조립)
-# =================================================================
-
