@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-engine-deployment  # 이름을 다르게 해서 충돌을 피합니다.
+  labels:
+    app: ai-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-engine
+  template:
+    metadata:
+      labels:
+        app: ai-engine
+    spec:
+      containers:
+      - name: ai-engine
+        # 우리가 방금 Push한 ECR 주소를 사용합니다.
+        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:latest
+        ports:
+        - containerPort: 11434 # Ollama 엔진이 사용하는 포트입니다.
+        resources:
+          requests:
+            cpu: "1000m"
+            memory: "2Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
