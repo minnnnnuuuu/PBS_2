@@ -269,5 +269,64 @@ module "waf" {
   name   = var.project_name
 }
 
+# =================================================================
+# 10. ECR (도커 이미지 저장소) - 직접 생성 방식
+# =================================================================
 
+# 1. 저장소 생성
+resource "aws_ecr_repository" "app_repo" {
+  name                 = "${var.project_name}-repo"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true  # 안에 이미지가 있어도 삭제 가능하게
 
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+# 2. 수명 주기 정책 (오래된 이미지 삭제)
+resource "aws_ecr_lifecycle_policy" "app_repo_policy" {
+  repository = aws_ecr_repository.app_repo.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 10 images"
+        selection    = {
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 10
+        }
+        action       = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+
+# 3. 주소 출력 (나중에 젠킨스가 써야 함)
+output "ecr_repository_url" {
+  description = "ECR Repository URL"
+  value       = aws_ecr_repository.app_repo.repository_url
+}
+# =================================================================
+# 11. Route53 (도메인 관리)
+# =================================================================
+resource "aws_route53_zone" "main" {
+  name    = "test.cloudreaminu.cloud"  # 사용자님의 도메인
+  comment = "Managed by Terraform for PBS Project"
+}
+
+# 나중에 써먹기 위해 Zone ID 출력
+output "route53_zone_id" {
+  description = "Route53 Hosted Zone ID"
+  value       = aws_route53_zone.main.zone_id
+}
+
+# 도메인 등록기관(가비아, 후이즈 등)에 등록할 네임서버 목록 출력
+output "route53_nameservers" {
+  description = "Route53 Name Servers (Update this in your domain registrar)"
+  value       = aws_route53_zone.main.name_servers
+}
