@@ -1,15 +1,15 @@
-name: PBS_2 CI Pipeline (Build Only Mode)
+name: Build and Push to ECR
 
 on:
   push:
-    branches: [ "main" ] # 메인 브랜치에 코드가 올라오면 요정이 움직입니다.
+    branches: [ "main" ]
 
 jobs:
-  build-test:
-    runs-on: ubuntu-latest # 깃허브가 무료로 빌려주는 컴퓨터입니다.
+  deploy:
+    runs-on: ubuntu-latest
     
     steps:
-    - name: 1. 설계도(코드) 가져오기
+    - name: 1. 코드 가져오기
       uses: actions/checkout@v4
 
     - name: 2. AWS 신분증 확인
@@ -19,28 +19,20 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-2 
 
-    - name: 3. AWS ECR 창고 로그인 테스트
+    - name: 3. AWS ECR 로그인
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: 4. Docker 이미지 빌드 (도시락 싸기)
+    - name: 4. 이미지 빌드 및 전송 (Push)
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: pbs-project-repo  # 시크릿 대신 직접 이름을 입력했습니다.
+        IMAGE_TAG: latest                # 테스트의 편의를 위해 latest로 고정합니다.
       run: |
-        REGISTRY=${{ steps.login-ecr.outputs.registry }}
-        REPOSITORY=${{ secrets.ECR_REPOSITORY }}
-        IMAGE_TAG=${{ github.sha }}
+        # 이미지를 빌드합니다.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         
-        # 실제 이미지를 생성하지만, 업로드는 하지 않아 비용이 발생하지 않습니다.
-        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-        echo "✅ 빌드 성공! 설계도에 문제가 없습니다."
-
-    # ---------------------------------------------------------
-    # ⚠️ 비용 방지를 위해 Push 명령은 주석 처리(##) 되어 있습니다.
-    # 나중에 제출 직전에 ##만 지우면 실제로 전송됩니다.
-    # ---------------------------------------------------------
-    - name: 5. 이미지 전송 테스트 (Skip)
-      run: |
-        echo "📢 현재는 비용 절감 모드입니다. Push를 수행하지 않습니다."
-        ## REGISTRY=${{ steps.login-ecr.outputs.registry }}
-        ## REPOSITORY=${{ secrets.ECR_REPOSITORY }}
-        ## IMAGE_TAG=${{ github.sha }}
-        ## docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        # 빌드된 이미지를 AWS ECR 창고로 실제로 전송합니다.
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        
+        echo "✅ ECR 전송 완료! 이제 ArgoCD가 이 이미지를 사용할 수 있습니다."
