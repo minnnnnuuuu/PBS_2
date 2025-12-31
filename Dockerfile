@@ -1,2 +1,3 @@
-FROM nginx:alpine
-CMD ["echo", "PBS AI App Pipeline Test Success!"]
+FROM ollama/ollama
+EXPOSE 11434
+ENTRYPOINT ["/bin/ollama", "serve"]
