@@ -1,0 +1,39 @@
+name: Hybrid Service Build and Push
+
+on:
+  push:
+    branches: [ "main" ]
+    # 하이브리드 소스 코드가 있는 폴더가 따로 있다면 아래처럼 경로를 지정하면 더 좋습니다.
+    # paths:
+    #   - 'hybrid-app/**' 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 1. 코드 가져오기
+      uses: actions/checkout@v4
+
+    - name: 2. AWS 신분증 확인
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-northeast-2 
+
+    - name: 3. AWS ECR 로그인
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: 4. 하이브리드 이미지 빌드 및 전송 (Push)
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: hybrid-service  # 👈 여기를 'hybrid-service'로 수정!
+        IMAGE_TAG: latest
+      run: |
+        # 주의: Dockerfile이 있는 위치로 이동하거나 경로를 지정해야 합니다.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        
+        echo "✅ 하이브리드 서비스 전송 완료!"
