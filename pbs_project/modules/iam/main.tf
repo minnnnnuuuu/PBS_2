@@ -1,53 +1,93 @@
 variable "name" {}
 
-# 1. 역할(Role) 만들기: "나는 EC2가 사용할 신분증입니다"
+# 1. Bastion Host용 역할 및 프로필
 resource "aws_iam_role" "bastion_role" {
   name = "${var.name}-bastion-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
   })
 }
 
-# 2. 권한 붙이기: "이 신분증이 있으면 SSM으로 접속 가능함"
 resource "aws_iam_role_policy_attachment" "ssm_policy" {
   role       = aws_iam_role.bastion_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# 3. 프로필 만들기: EC2에게 쥐여줄 수 있는 형태 (목걸이 케이스)
 resource "aws_iam_instance_profile" "bastion_profile" {
   name = "${var.name}-bastion-profile"
   role = aws_iam_role.bastion_role.name
 }
 
-# 2. [필수] EKS 노드 그룹용 Service Linked Role (계정당 1개)
-# =========================================================
-
-# [추가] "이미 있으면 가져와!" 라고 코드로 명시하는 부분
-
-# [수정] 이미 있는지 먼저 확인합니다.
+# 2. EKS 노드 그룹용 Service Linked Role (계정당 1개 체크)
 data "aws_iam_roles" "eks_nodegroup_role_check" {
   name_regex = "AWSServiceRoleForAmazonEKSNodegroup"
 }
 
-# [수정] 검색 결과가 없을 때만(count = 0일 때) 생성합니다.
 resource "aws_iam_service_linked_role" "eks_nodegroup" {
   count            = length(data.aws_iam_roles.eks_nodegroup_role_check.names) == 0 ? 1 : 0
   aws_service_name = "eks-nodegroup.amazonaws.com"
 }
 
-# 이 역할은 계정 전체에 딱 하나만 있어야 하므로, 
-# EKS 모듈(여러 번 생성 가능)에 넣지 않고 여기서 관리합니다.
-#resource "aws_iam_service_linked_role" "eks_nodegroup" {
-#  aws_service_name = "eks-nodegroup.amazonaws.com"
-#}
+# 3. [중요] EKS 노드 그룹용 역할(Role) 정의 (404 에러 해결사)
+resource "aws_iam_role" "eks_node_role" {
+  name = "${var.name}-dev-eks-node-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+# 4. EKS 노드 기본 권한들 연결
+resource "aws_iam_role_policy_attachment" "node_AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_node_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "node_AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_node_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "node_AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node_role.name
+}
+
+# 5. Gateway API 전용 정책 및 연결
+resource "aws_iam_policy" "lbc_gateway_policy" {
+  name        = "${var.name}-lbc-gateway-policy"
+  description = "Allow AWS Load Balancer Controller to manage Gateway API resources"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "elasticloadbalancing:CreateLoadBalancer",
+        "elasticloadbalancing:CreateListener",
+        "elasticloadbalancing:DeleteListener",
+        "elasticloadbalancing:CreateRule",
+        "elasticloadbalancing:DeleteRule",
+        "tag:GetResources",
+        "tag:TagResources"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lbc_gateway_attach" {
+  role       = aws_iam_role.eks_node_role.name # 이제 여기서 참조하니까 에러 안 나요!
+  policy_arn = aws_iam_policy.lbc_gateway_policy.arn
+}

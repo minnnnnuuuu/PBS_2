@@ -21,10 +21,12 @@ output "cluster_role_arn" {
   value       = aws_iam_role.cluster.arn
 }
 
-output "node_role_arn" {
-  description = "IAM Role ARN for EKS Nodes"
-  value       = aws_iam_role.node.arn
-}
+#==========0104 주석 처리===========
+#output "node_role_arn" {
+#  description = "IAM Role ARN for EKS Nodes"
+#  value       = aws_iam_role.node.arn
+#}
+#==========0104 주석 처리===========
 
 # [추가] LBC 설치할 때 필요한 OIDC 정보
 output "oidc_provider_arn" {
@@ -37,10 +39,10 @@ output "oidc_provider_url" {
   value       = replace(aws_iam_openid_connect_provider.eks.url, "https://", "")
 }
 
-output "lbc_role_arn" {
-  description = "IAM Role ARN for AWS Load Balancer Controller"
-  value       = aws_iam_role.lbc_role.arn
-}
+#output "lbc_role_arn" {
+#  description = "IAM Role ARN for AWS Load Balancer Controller"
+#  value       = aws_iam_role.lbc_role.arn
+#}
 output "cluster_certificate_authority_data" {
   description = "Base64 encoded certificate data required to communicate with the cluster"
   value       = aws_eks_cluster.this.certificate_authority[0].data

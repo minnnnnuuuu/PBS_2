@@ -96,6 +96,9 @@ module "eks" {
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
   
+  # [0104 추가] IAM 모듈에서 만든 노드 역할 ARN을 EKS 모듈로 전달!
+  node_role_arn = module.iam.eks_node_role_arn
+
   # 노드는 반드시 Private App Subnet에 배치
   subnet_ids   = module.vpc.private_subnets 
 
@@ -186,13 +189,21 @@ data "aws_eks_cluster_auth" "cluster" {
 #}
 
 #=============헬름 모듈 변경================
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
-  }
-}
+#중복 => 주석처리
+#provider "helm" {
+#  kubernetes {
+#    host                   = module.eks.cluster_endpoint
+#    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+#    token                  = data.aws_eks_cluster_auth.cluster.token
+#
+#    # [0103 수정] 실시간 토큰 생성 방식으로 변경
+#    exec {
+#      api_version = "client.authentication.k8s.io/v1beta1"
+#      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+#      command     = "aws"
+#    }
+#  }
+#}
 
 #========쿠버 초안===========
 #provider "kubernetes" {
@@ -201,11 +212,18 @@ provider "helm" {
 #  token                  = data.aws_eks_cluster_auth.cluster.token
 #}
 #=============쿠버 모듈 변경================
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
+#provider "kubernetes" {
+#  host                   = module.eks.cluster_endpoint
+#  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+#  token                  = data.aws_eks_cluster_auth.cluster.token
+
+  # [0103 추가] 헬름 프로바이더와 똑같이 이 부분을 넣어주세요!
+#  exec {
+#    api_version = "client.authentication.k8s.io/v1beta1"
+#    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+#    command     = "aws"
+#  }
+#}
 
 #========1229 pm 0350 추가===========
 
@@ -228,6 +246,7 @@ resource "null_resource" "gateway_api_crds" {
 }
 
 # [수정 2] LBC 일꾼 설치 (에러 났던 플래그들을 차트 설정에 맞게 수정)
+/*
 resource "helm_release" "aws_lbc" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
@@ -235,7 +254,15 @@ resource "helm_release" "aws_lbc" {
   namespace  = "kube-system"
   
   # 최신 버전으로 업데이트 (v2.10.0 이상을 사용해야 Gateway API가 잘 돌아갑니다)
-  version    = "1.9.0" # LBC App Version v2.11.0 대응 차트
+  version    = "1.11.0" # LBC App Version v2.11.0 대응 차트
+
+  # [수정 3] Gateway API 활성화 방식 변경
+  # "featureGates.GatewayAPI" 대신 "enableGatewayApi"를 사용하는 것이 최신 차트 방식입니다.
+  set {
+    #name  = "featureGates.GatewayAPI"
+    name  = "enableGatewayApi"
+    value = "true"
+  }
 
   set {
     name  = "clusterName"
@@ -244,7 +271,7 @@ resource "helm_release" "aws_lbc" {
 
   set {
     name  = "serviceAccount.create"
-    value = "false" # 아까 eksctl로 만드셨거나 이미 있다면 false
+    value = "true" # 아까 eksctl로 만드셨거나 이미 있다면 false
   }
 
   set {
@@ -269,16 +296,11 @@ resource "helm_release" "aws_lbc" {
     value = module.vpc.vpc_id
   }
 
-  # [수정 3] Gateway API 활성화 방식 변경
-  # "featureGates.GatewayAPI" 대신 "enableGatewayApi"를 사용하는 것이 최신 차트 방식입니다.
-  set {
-    name  = "enableGatewayApi"
-    value = "true"
-  }
+  
 
   # 법전(CRD)이 먼저 깔려야 LBC가 에러 없이 작동합니다.
   depends_on = [module.eks, null_resource.gateway_api_crds]
-}
+}*/
 
 # =================================================================
 # 9. WAF (웹 방화벽)
@@ -324,6 +346,8 @@ resource "aws_ecr_lifecycle_policy" "app_repo_policy" {
     ]
   })
 }
+
+
 
 # 3. 주소 출력 (나중에 젠킨스가 써야 함)
 output "ecr_repository_url" {
