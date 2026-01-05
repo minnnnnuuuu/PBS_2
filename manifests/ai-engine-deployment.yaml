@@ -1,7 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ai-engine-deployment  # 이름을 다르게 해서 충돌을 피합니다.
+  name: ai-engine-deployment
+  namespace: default  # 아까 ArgoCD에서 지정한 네임스페이스와 일치시켜주세요.
   labels:
     app: ai-engine
 spec:
@@ -16,10 +17,24 @@ spec:
     spec:
       containers:
       - name: ai-engine
-        # 우리가 방금 Push한 ECR 주소를 사용합니다.
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:latest
+        imagePullPolicy: Always  # 이미지 교체 시 즉각 반영을 위해 추가
         ports:
-        - containerPort: 11434 # Ollama 엔진이 사용하는 포트입니다.
+        - containerPort: 11434
+        
+        # --- 추가된 헬스 체크 ---
+        livenessProbe:
+          tcpSocket:
+            port: 11434
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          tcpSocket:
+            port: 11434
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        # -----------------------
+
         resources:
           requests:
             cpu: "200m"
