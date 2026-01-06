@@ -1,5 +1,3 @@
-# 파일 위치: pbs_project/provider.tf
-
 terraform {
   required_providers {
     aws = {
@@ -8,26 +6,55 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "~> 2.9" # 최신 버전 강제
+      version = "~> 2.9"
+    }
+    # [추가] 쿠버네티스 리소스(Gateway, HTTPRoute)를 만들기 위해 필요합니다.
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
     }
   }
-  backend "s3" {
-    # 1. 아까 AWS 콘솔에서 손으로 만든 '그 버킷 이름'을 적으세요.
-    bucket = "pbs-project-tfstate-soldesk-pbs" 
-    
-    # 2. S3 안에 저장될 파일 이름입니다. (이건 그대로 두셔도 됩니다)
-    key    = "terraform.tfstate"
-    
-    # 3. 버킷이 있는 리전 (서울)
-    region = "ap-northeast-2"
 
+  backend "s3" {
+    bucket         = "pbs-project-tfstate-soldesk-pbs" 
+    key            = "terraform.tfstate"
+    region         = "ap-northeast-2"
     dynamodb_table = "terraform-locks" 
     encrypt        = true
   }
 }
 
 provider "aws" {
-  region = "ap-northeast-2"  # 서울 리전
-  # 자격 증명(Access Key)은 PC에 aws cli로 로그인되어 있다고 가정합니다.
-  # 만약 안 되어 있다면 profile = "default" 등을 추가해야 합니다.
+  region = "ap-northeast-2"
+}
+
+# [추가] EKS 클러스터에 접속하기 위한 실시간 인증 토큰을 가져옵니다.
+#data "aws_eks_cluster_auth" "this" {
+#  name = module.eks.cluster_name # 가영님의 EKS 모듈 출력값에 맞춰야 합니다.
+#}
+
+# [추가] 쿠버네티스 프로바이더 설정
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  #token                  = data.aws_eks_cluster_auth.this.token
+  exec {
+  api_version = "client.authentication.k8s.io/v1beta1"
+  command     = "aws"
+  args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+}
+}
+
+# [기존 수정] Helm 프로바이더에 쿠버네티스 연결 정보를 주입합니다.
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    #token                  = data.aws_eks_cluster_auth.this.token
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    }
+  }
 }

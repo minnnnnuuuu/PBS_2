@@ -111,10 +111,10 @@ output "cluster_role_arn" {
   value       = module.eks.cluster_role_arn
 }
 
-output "node_role_arn" {
-  description = "EKS Node Role ARN"
-  value       = module.eks.node_role_arn
-}
+#output "node_role_arn" {
+#  description = "EKS Node Role ARN"
+#  value       = module.eks.node_role_arn
+#}
 # pbs_project/outputs.tf 안에 추가
 
 output "waf_arn" {

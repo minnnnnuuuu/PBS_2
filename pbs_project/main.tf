@@ -109,11 +109,16 @@ module "eks" {
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
   
+  # [0104 추가] IAM 모듈에서 만든 노드 역할 ARN을 EKS 모듈로 전달!
+  node_role_arn = module.iam.eks_node_role_arn
+
   # 노드는 반드시 Private App Subnet에 배치
   subnet_ids   = module.vpc.private_subnets 
 
   # IAM 모듈(Role 생성)이 완전히 끝날 때까지 기다렸다가 시작
   depends_on = [module.iam]
+
+  waf_acl_arn  = module.waf.web_acl_arn
 }
 
 # [팀원 일괄 등록] terraform.tfvars 파일의 명단을 읽어와 자동 적용
@@ -196,20 +201,35 @@ provider "kubernetes" {
 
 # 8. AWS Load Balancer Controller 설치 (Helm Chart)
 
+# [수정 1] Gateway API CRD 설치 (버전을 v1.1.0으로 명시하여 LBC v2.10+와 호환)
+resource "null_resource" "gateway_api_crds" {
+  provisioner "local-exec" {
+    # 아까 수동으로 치신 명령어입니다. 테라폼이 대신 실행하게 합니다.
+    command = "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml"
+  }
+
+  depends_on = [module.eks]
+}
+
+# [수정 2] LBC 일꾼 설치 (에러 났던 플래그들을 차트 설정에 맞게 수정)
+
 resource "helm_release" "aws_lbc" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
-  version    = "1.7.1"
+  
+  # 최신 버전으로 업데이트 (v2.10.0 이상을 사용해야 Gateway API가 잘 돌아갑니다)
+  version    = "1.11.0" # LBC App Version v2.11.0 대응 차트
 
-  # 1. 게이트웨이 기능 활성화 (아까 모듈 안에 있던 설정)
+  # [수정 3] Gateway API 활성화 방식 변경
+  # "featureGates.GatewayAPI" 대신 "enableGatewayApi"를 사용하는 것이 최신 차트 방식입니다.
   set {
-    name  = "featureGates"
-    value = "GatewayAPI=true"
+    #name  = "featureGates.GatewayAPI"
+    name  = "enableGatewayApi"
+    value = "true"
   }
 
-  # 2. 클러스터 이름 (모듈 결과값 참조)
   set {
     name  = "clusterName"
     value = module.eks.cluster_name
@@ -217,7 +237,7 @@ resource "helm_release" "aws_lbc" {
 
   set {
     name  = "serviceAccount.create"
-    value = "true"
+    value = "true" # 아까 eksctl로 만드셨거나 이미 있다면 false
   }
 
   set {
@@ -225,6 +245,7 @@ resource "helm_release" "aws_lbc" {
     value = "aws-load-balancer-controller"
   }
 
+  # [중요] 아까 우리가 수술한 '권한(IAM Role)' 주소입니다.
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = module.eks.lbc_role_arn
@@ -235,13 +256,14 @@ resource "helm_release" "aws_lbc" {
     value = "ap-northeast-2"
   }
 
+  # [중요] 아까 수동으로 넣었던 VPC ID를 자동 연결
   set {
     name  = "vpcId"
     value = module.vpc.vpc_id
   }
 
   # EKS 모듈 생성 후 실행
-  depends_on = [module.eks]
+  depends_on = [module.eks, null_resource.gateway_api_crds]
 }
 
 # ArgoCD 설치 (Helm) - 하이브리드 배포의 사령탑

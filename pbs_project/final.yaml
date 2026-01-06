@@ -1,0 +1,12 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: aws-load-balancer-controller
+        image: public.ecr.aws/eks/aws-load-balancer-controller:v2.10.0
+        args:
+        - --cluster-name=pbs-project-dev-cluster
+        - --ingress-class=alb
+        - --aws-region=ap-northeast-2
+        - --aws-vpc-id=vpc-0d73c9f71e316f319
+        - --feature-gates=GatewayAPI=true
