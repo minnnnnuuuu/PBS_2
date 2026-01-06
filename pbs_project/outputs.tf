@@ -121,3 +121,20 @@ output "waf_arn" {
   description = "WAF WebACL ARN (Give this to Ingress Team)"
   value       = module.waf.web_acl_arn
 }
+# ==========================================
+# 7. 📦 컨테이너 저장소 (ECR) - CI/CD용
+# ==========================================
+# GitHub Actions가 이미지를 올릴 때 이 주소가 꼭 필요합니다.
+output "ecr_repository_url" {
+  description = "ECR 저장소 URL (GitHub Actions에서 사용)"
+  value       = aws_ecr_repository.app_repo.repository_url
+}
+
+# ==========================================
+# 8. 🔒 인증서 (ACM) - Ingress용
+# ==========================================
+# 나중에 Ingress(대문) 만들 때 "이 인증서 써라"고 알려줘야 합니다.
+output "acm_certificate_arn" {
+  description = "ACM 인증서 ARN (Ingress에 설정 필요)"
+  value       = aws_acm_certificate.cert.arn
+}
