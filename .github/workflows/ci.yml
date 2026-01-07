@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 1. 코드 가져오기
       uses: actions/checkout@v4
@@ -17,7 +17,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ap-northeast-2 
+        aws-region: ap-northeast-2
 
     - name: 3. AWS ECR 로그인
       id: login-ecr
@@ -26,13 +26,14 @@ jobs:
     - name: 4. 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: pbs-project-repo  # 시크릿 대신 직접 이름을 입력했습니다.
-        IMAGE_TAG: latest                # 테스트의 편의를 위해 latest로 고정합니다.
+        ECR_REPOSITORY: pbs-project-repo
+        IMAGE_TAG: latest
       run: |
-        # 이미지를 빌드합니다.
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        # 중요: website 폴더 안에서 빌드를 시작하도록 설정합니다.
+        # 이렇게 해야 Docker가 같은 폴더에 있는 index.html을 찾을 수 있습니다.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG website/
         
-        # 빌드된 이미지를 AWS ECR 창고로 실제로 전송합니다.
+        # 빌드된 이미지를 전송합니다.
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         
-        echo "✅ ECR 전송 완료! 이제 ArgoCD가 이 이미지를 사용할 수 있습니다."
+        echo "✅ ECR 전송 완료! 이제 Argo CD가 최신 웹사이트를 배포할 수 있습니다."
