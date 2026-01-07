@@ -3,8 +3,9 @@ name: Build and Push to ECR (Website)
 on:
   push:
     branches: [ "main" ]
+    # website 폴더 내의 파일이 바뀔 때만 실행되도록 경로를 명시합니다.
     paths:
-      - 'website/**' # website 폴더 변경시에만 작동하도록 제한 (선택 사항)
+      - 'website/**'
 
 jobs:
   deploy:
@@ -29,9 +30,10 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: pbs-project-repo
-        [cite_start]IMAGE_TAG: web-latest # 태그를 'web-latest'로 고정하여 구분
+        # 깨끗하게 수정되었습니다.
+        IMAGE_TAG: web-latest
       run: |
-        # website 폴더 안에서 빌드를 시작합니다.
+        # website 폴더를 기준으로 빌드합니다.
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG website/
         
         # 빌드된 웹 이미지를 전송합니다.
