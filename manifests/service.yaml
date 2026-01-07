@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: hybrid-ai-service
+  name: y-docs-web-service
 spec:
+  type: LoadBalancer
   selector:
-    app: hybrid-ai
+    app: y-docs-web
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: LoadBalancer # 외부에서 접속할 수 있게 대문을 열어줍니다

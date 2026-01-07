@@ -1,25 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hybrid-ai-service
-  labels:
-    app: hybrid-ai
+  name: y-docs-web
 spec:
-  replicas: 2 # 로봇을 2대 띄웁니다 (AWS 하나, OKD 하나 식으로 조절 가능)
+  replicas: 1
   selector:
     matchLabels:
-      app: hybrid-ai
+      app: y-docs-web
   template:
     metadata:
       labels:
-        app: hybrid-ai
+        app: y-docs-web
     spec:
       containers:
-      - name: ai-app
-        # ⚠️ 중요: 헴이 만든 ECR 주소와 이미지 이름을 넣으세요!
-        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service 
+      - name: web-container
+        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:latest
         ports:
         - containerPort: 80
-      # 💡 팀장님이 강조하신 하이브리드 노드 선택 (예시)
-      # nodeSelector:
-      #   type: hybrid-node
