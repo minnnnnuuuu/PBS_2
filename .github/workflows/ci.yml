@@ -3,10 +3,7 @@ name: Build and Push to ECR (Website)
 on:
   push:
     branches: [ "main" ]
-    # 중요: website 코드나 manifests 설정이 바뀔 때 모두 빌드가 돌아가도록 수정했습니다.
-    paths:
-      - 'website/**'
-      - 'manifests/**'
+    # paths 필터를 제거했습니다. 이제 push만 하면 무조건 빌드됩니다.
 
 jobs:
   deploy:
@@ -33,10 +30,10 @@ jobs:
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: web-latest
       run: |
-        # website 폴더 내의 index.html과 Dockerfile을 사용하여 빌드합니다.
+        # website 폴더를 기준으로 빌드합니다.
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG website/
         
-        # 빌드된 이미지를 ECR 창고로 전송합니다.
+        # 빌드된 웹 이미지를 전송합니다.
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         
-        echo "✅ 웹사이트 이미지(web-latest)가 성공적으로 ECR에 입고되었습니다!"
+        echo "✅ 웹사이트 이미지(web-latest) 전송 완료!"
