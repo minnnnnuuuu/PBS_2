@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: argocd-vs
+  namespace: argocd
+spec:
+  gateways:
+  - istio-system/pbs-gateway
+  hosts:
+  - "soldesk-group4-pbs-project.click"
+  http:
+  - match:
+    - uri:
+        prefix: /argocd
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: argocd-server
+        port:
+          number: 80

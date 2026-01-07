@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: pbs-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingress
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "soldesk-group4-pbs-project.click" # 우리 도메인만 허용
+    - "*.soldesk-group4-pbs-project.click" # 서브도메인 포함
