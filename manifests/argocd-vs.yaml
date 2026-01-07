@@ -5,17 +5,15 @@ metadata:
   namespace: argocd
 spec:
   gateways:
-  - istio-system/pbs-gateway
+  - istio-system/istio-gateway
   hosts:
   - "soldesk-group4-pbs-project.click"
   http:
   - match:
     - uri:
-        prefix: /argocd
-    rewrite:
-      uri: /
+        prefix: /  # <--- /argocd 대신 / 로 변경하여 도메인 접속 시 바로 뜨게 함
     route:
     - destination:
-        host: argocd-server
+        host: argocd-server.argocd.svc.cluster.local
         port:
           number: 80
