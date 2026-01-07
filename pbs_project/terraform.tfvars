@@ -7,6 +7,8 @@ environment = "dev"
 
 # 여기에 팀원들을 계속 추가하면 됩니다.
 team_members = [
+  # "arn:aws:iam::198011705652:user/kkh_soldesk",
   "arn:aws:iam::198011705652:user/ssw_soldesk",  # ssw 님
-  "arn:aws:iam::198011705652:user/cgy_soldesk"   # cgy 님
+  "arn:aws:iam::198011705652:user/cgy_soldesk",   # cgy 님
+  "arn:aws:iam::198011705652:user/kdh_soldesk"
 ]

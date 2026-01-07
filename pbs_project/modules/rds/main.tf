@@ -21,7 +21,7 @@ data "aws_secretsmanager_secret_version" "db_password" {
 resource "aws_rds_cluster" "main" {
   cluster_identifier      = "${var.name}-cluster"
   engine                  = "aurora-postgresql"
-  engine_version          = "16.1"               # 안정적인 버전
+  engine_version          = "16.4"               # 안정적인 버전 전 16.1
   availability_zones      = ["ap-northeast-2a", "ap-northeast-2c"]
   db_subnet_group_name    = aws_db_subnet_group.main.name
   vpc_security_group_ids  = [var.sg_id]
