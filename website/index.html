@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y-Docs | AI Document Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* 커스텀 스크롤바 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="goHome()">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">Y</div>
+            <span class="text-xl font-bold tracking-tight">Y-Docs</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-md transition"><i class="fas fa-upload mr-2"></i>문서 업로드</button>
+            <div class="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-500">
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 relative overflow-hidden">
+
+        <div id="view-dashboard" class="absolute inset-0 flex flex-col items-center justify-center p-4 fade-in transition-all duration-500">
+            <div class="w-full max-w-3xl text-center space-y-8">
+                
+                <div>
+                    <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Hello, Team! 👋</h1>
+                    <p class="text-slate-500 text-lg">사내 문서, 위키, 기술 가이드에서 AI가 답을 찾아드립니다.</p>
+                </div>
+
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-slate-400 group-hover:text-blue-500 transition"></i>
+                    </div>
+                    <input type="text" id="main-search-input" 
+                        class="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 shadow-lg text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        placeholder="예: EKS 클러스터 업그레이드 절차 알려줘"
+                        onkeypress="handleMainEnter(event)">
+                    <button onclick="startSearch()" class="absolute inset-y-2 right-2 bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-xl transition font-medium">
+                        질문하기
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-2">
+                    <span class="text-sm text-slate-400 py-1">추천 질문:</span>
+                    <button onclick="fillSearch('VPN 접속 오류 해결 방법')" class="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600 transition">VPN 접속 오류</button>
+                    <button onclick="fillSearch('2025년 1분기 OKR 요약해줘')" class="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600 transition">2025 OKR 요약</button>
+                    <button onclick="fillSearch('EKS 노드 그룹 생성 가이드')" class="px-3 py-1 bg-white border border-slate-200 rounded-full text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600 transition">EKS 가이드</button>
+                </div>
+
+                <div class="pt-8 w-full text-left">
+                    <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">최근 업데이트된 문서</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 hover:shadow-md transition cursor-pointer">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 bg-red-100 text-red-500 rounded flex items-center justify-center"><i class="fas fa-file-pdf"></i></div>
+                                <div class="text-sm font-bold text-slate-700 truncate">DevOps_Roadmap_v2.pdf</div>
+                            </div>
+                            <div class="text-xs text-slate-400">2시간 전 업데이트됨</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 hover:shadow-md transition cursor-pointer">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 bg-blue-100 text-blue-500 rounded flex items-center justify-center"><i class="fas fa-file-word"></i></div>
+                                <div class="text-sm font-bold text-slate-700 truncate">사내_보안_규정.docx</div>
+                            </div>
+                            <div class="text-xs text-slate-400">어제 업데이트됨</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 hover:shadow-md transition cursor-pointer">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-8 h-8 bg-green-100 text-green-500 rounded flex items-center justify-center"><i class="fas fa-file-alt"></i></div>
+                                <div class="text-sm font-bold text-slate-700 truncate">EKS_Troubleshooting.md</div>
+                            </div>
+                            <div class="text-xs text-slate-400">3일 전 업데이트됨</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-chat" class="absolute inset-0 flex hidden opacity-0 transition-opacity duration-300">
+            
+            <aside class="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
+                <div class="p-4 border-b border-slate-100">
+                    <button onclick="goHome()" class="w-full flex items-center justify-center gap-2 py-2 px-4 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+                        <i class="fas fa-plus"></i> 새 대화 시작
+                    </button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                    <div class="text-xs font-bold text-slate-400 px-3 py-2">오늘</div>
+                    <button class="w-full text-left px-3 py-2 text-sm text-slate-700 bg-blue-50 rounded-md truncate font-medium">EKS 업그레이드 질문</button>
+                    <button class="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-md truncate">연차 사용 규정</button>
+                </div>
+            </aside>
+
+            <section class="flex-1 flex flex-col bg-white relative">
+                <div id="chat-container" class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
+                    
+                    <div class="flex items-start gap-4">
+                        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-1">
+                            <i class="fas fa-robot text-sm"></i>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-2xl text-slate-700 text-sm leading-relaxed">
+                            안녕하세요! 문서 기반 AI 어시스턴트입니다. 궁금한 내용을 물어보시면 관련 문서를 찾아 답변해 드립니다.
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="p-4 bg-white border-t border-slate-200">
+                    <div class="max-w-3xl mx-auto relative">
+                        <textarea id="chat-input" rows="1" 
+                            class="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none overflow-hidden" 
+                            placeholder="추가 질문을 입력하세요..."
+                            onkeypress="handleChatEnter(event)"></textarea>
+                        <button onclick="sendMessage()" class="absolute bottom-2.5 right-2 w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 transition">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="text-center mt-2 text-xs text-slate-400">
+                        AI는 실수를 할 수 있습니다. 중요 정보는 원본 문서를 확인하세요.
+                    </div>
+                </div>
+            </section>
+
+            <aside class="w-80 bg-white border-l border-slate-200 hidden lg:flex flex-col">
+                <div class="p-4 border-b border-slate-100 font-bold text-slate-700 flex items-center gap-2">
+                    <i class="fas fa-book-open text-blue-500"></i> 참고 문서 (Sources)
+                </div>
+                <div id="ref-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div class="text-center text-slate-400 text-sm mt-10">
+                        질문과 관련된 문서가<br>여기에 표시됩니다.
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+    </main>
+
+    <script>
+        const dashboard = document.getElementById('view-dashboard');
+        const chatView = document.getElementById('view-chat');
+        const mainInput = document.getElementById('main-search-input');
+        const chatContainer = document.getElementById('chat-container');
+        const chatInput = document.getElementById('chat-input');
+        const refContainer = document.getElementById('ref-container');
+
+        // 검색어 클릭 시 입력창 채우기
+        function fillSearch(text) {
+            mainInput.value = text;
+            mainInput.focus();
+        }
+
+        // 엔터키 처리
+        function handleMainEnter(e) { if(e.key === 'Enter') startSearch(); }
+        function handleChatEnter(e) { 
+            if(e.key === 'Enter' && !e.shiftKey) { 
+                e.preventDefault(); 
+                sendMessage(); 
+            }
+        }
+
+        // 대시보드 -> 채팅 화면 전환
+        function startSearch() {
+            const query = mainInput.value.trim();
+            if(!query) return;
+
+            // 화면 전환 애니메이션
+            dashboard.style.opacity = '0';
+            setTimeout(() => {
+                dashboard.classList.add('hidden');
+                chatView.classList.remove('hidden');
+                // 약간의 딜레이 후 opacity 변경 (페이드인)
+                setTimeout(() => chatView.classList.remove('opacity-0'), 50);
+                
+                // 첫 질문 전송 처리
+                addMessage('user', query);
+                simulateAIResponse(query);
+            }, 300);
+        }
+
+        // 채팅 메시지 전송
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if(!text) return;
+
+            addMessage('user', text);
+            chatInput.value = '';
+            chatInput.style.height = 'auto'; // 높이 초기화
+            simulateAIResponse(text);
+        }
+
+        // 메시지 UI 추가
+        function addMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = "flex items-start gap-4 fade-in";
+            
+            if(role === 'user') {
+                div.classList.add('flex-row-reverse');
+                div.innerHTML = `
+                    <div class="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 flex-shrink-0 mt-1">
+                        <i class="fas fa-user text-sm"></i>
+                    </div>
+                    <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-2xl text-sm leading-relaxed">
+                        ${text}
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-1">
+                        <i class="fas fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-2xl text-slate-700 text-sm leading-relaxed">
+                        ${text}
+                    </div>
+                `;
+            }
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // AI 응답 시뮬레이션
+        function simulateAIResponse(query) {
+            // 로딩 표시
+            const loadingId = 'loading-' + Date.now();
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingId;
+            loadingDiv.className = "flex items-start gap-4 fade-in";
+            loadingDiv.innerHTML = `
+                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-1">
+                    <i class="fas fa-robot text-sm"></i>
+                </div>
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 text-slate-500 text-sm">
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i> 문서를 분석 중입니다...
+                </div>
+            `;
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // 1.5초 후 답변 생성 (가짜)
+            setTimeout(() => {
+                document.getElementById(loadingId).remove();
+                
+                // 가짜 답변 텍스트
+                const fakeAnswer = `
+                    <strong>'${query}'</strong>에 대한 검색 결과입니다.<br><br>
+                    EKS 클러스터 업그레이드는 <strong>Blue/Green 배포 방식</strong>을 권장하고 있습니다. 
+                    주요 절차는 다음과 같습니다:
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li>새로운 버전의 노드 그룹 생성</li>
+                        <li>기존 파드(Pod)의 드레인(Drain) 및 마이그레이션</li>
+                        <li>구 버전 노드 그룹 삭제</li>
+                    </ul>
+                    <br>
+                    작업 전 반드시 <code>kubectl get nodes</code>로 상태를 확인하세요.
+                `;
+                addMessage('ai', fakeAnswer);
+
+                // 우측 참조 문서 업데이트 (가짜)
+                updateReferences();
+            }, 1500);
+        }
+
+        // 우측 참조 패널 업데이트
+        function updateReferences() {
+            refContainer.innerHTML = `
+                <div class="bg-white p-3 rounded-lg border border-slate-200 hover:border-blue-300 cursor-pointer transition shadow-sm fade-in">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">PDF</span>
+                        <span class="text-xs text-slate-400">98% 일치</span>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700 mb-1">EKS_Upgrade_Guide_v2.pdf</div>
+                    <div class="text-xs text-slate-500 line-clamp-2">...배포 전략 섹션 4.2 참조. 노드 드레인 시 주의사항...</div>
+                </div>
+
+                <div class="bg-white p-3 rounded-lg border border-slate-200 hover:border-blue-300 cursor-pointer transition shadow-sm fade-in">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">Wiki</span>
+                        <span class="text-xs text-slate-400">85% 일치</span>
+                    </div>
+                    <div class="text-sm font-bold text-slate-700 mb-1">트러블슈팅 가이드</div>
+                    <div class="text-xs text-slate-500 line-clamp-2">...업그레이드 실패 시 롤백 절차에 대하여...</div>
+                </div>
+            `;
+        }
+
+        // 홈으로 돌아가기
+        function goHome() {
+            chatView.classList.add('hidden');
+            chatView.classList.add('opacity-0');
+            dashboard.classList.remove('hidden');
+            setTimeout(() => dashboard.style.opacity = '1', 50);
+            mainInput.value = '';
+            chatContainer.innerHTML = ''; // 대화 초기화 (선택사항)
+        }
+
+        // 텍스트에어리어 자동 높이 조절
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+    </script>
+</body>
+</html>

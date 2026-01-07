@@ -192,6 +192,34 @@ resource "helm_release" "istio_ingress" {
   repository = "https://istio-release.storage.googleapis.com/charts"
   chart      = "gateway"
   namespace  = "istio-system"
+
+  set {
+    name  = "autoscaling.enabled"
+    value = "true" # [추가] 자동 확장 활성화
+  }
+
+  set {
+    name  = "autoscaling.minReplicas"
+    value = "2" # [추가] 최소 2개의 일꾼 유지 (AZ A, C에 하나씩)
+  }
+
+  # [추가] 가용 영역(AZ)별로 일꾼을 강제로 찢어서 배치하는 설정
+  set {
+    name  = "topologySpreadConstraints[0].maxSkew"
+    value = "1" # [추가]
+  }
+  set {
+    name  = "topologySpreadConstraints[0].topologyKey"
+    value = "topology.kubernetes.io/zone" # [추가] 영역(Zone)을 기준으로 분산
+  }
+  set {
+    name  = "topologySpreadConstraints[0].whenUnsatisfiable"
+    value = "DoNotSchedule" # [추가] 한쪽에 몰릴 바에는 띄우지 말고 대기 (강력한 분산)
+  }
+  set {
+    name  = "topologySpreadConstraints[0].labelSelector.matchLabels.istio"
+    value = "ingress" # [추가]
+  }
   
 
   #=========추가0105

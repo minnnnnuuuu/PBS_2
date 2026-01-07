@@ -19,7 +19,7 @@ server:
   persistentVolume:
     enabled: false
   remoteWrite:
-    - url: "http://121.160.42.43:9090/api/v1/write"
+    - url: "https://prometheus.cloudreaminu.cloud/api/v1/write"
   global:
     external_labels:
       cluster: "pbs-eks-dev"
@@ -53,7 +53,7 @@ resource "helm_release" "promtail" {
   values = [<<EOF
 config:
   clients:
-    - url: "http://121.160.42.43:3100/loki/api/v1/push"
+    - url: "https://loki.cloudreaminu.cloud/loki/api/v1/push"
       external_labels:
         cluster: "pbs-eks-dev"
 EOF
