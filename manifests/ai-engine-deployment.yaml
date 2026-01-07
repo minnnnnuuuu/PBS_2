@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-engine-deployment
-  namespace: default  # 아까 ArgoCD에서 지정한 네임스페이스와 일치시켜주세요.
+  namespace: default
   labels:
     app: ai-engine
 spec:
@@ -17,12 +17,12 @@ spec:
     spec:
       containers:
       - name: ai-engine
-        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:latest
-        imagePullPolicy: Always  # 이미지 교체 시 즉각 반영을 위해 추가
+        # 리포지토리를 hybrid-service로, 태그를 :ai-latest로 변경했습니다.
+        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 11434
-        
-        # --- 추가된 헬스 체크 ---
+
         livenessProbe:
           tcpSocket:
             port: 11434
@@ -33,7 +33,6 @@ spec:
             port: 11434
           initialDelaySeconds: 30
           periodSeconds: 10
-        # -----------------------
 
         resources:
           requests:
