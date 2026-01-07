@@ -11,7 +11,7 @@ terraform {
     # [추가] 쿠버네티스 리소스(Gateway, HTTPRoute)를 만들기 위해 필요합니다.
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.0"
+      version = "~> 2.24"
     }
   }
 
@@ -41,7 +41,7 @@ provider "kubernetes" {
   exec {
   api_version = "client.authentication.k8s.io/v1beta1"
   command     = "aws"
-  args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+  args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", "ap-northeast-2"]
 }
 }
 
@@ -54,7 +54,7 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", "ap-northeast-2"]
     }
   }
 }

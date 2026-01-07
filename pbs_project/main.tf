@@ -150,6 +150,7 @@ resource "aws_eks_access_policy_association" "team_members_policy" {
 }
 
 # [필수 요구사항] EFS CSI Driver 자동 설치
+# eks 모듈 안에 잘 있으심다.
 #resource "aws_eks_addon" "efs_csi_driver" {
 #  # EKS 모듈에서 cluster_name을 뱉어내야 합니다!
 #  cluster_name = module.eks.cluster_name 
@@ -179,25 +180,12 @@ resource "aws_eks_access_policy_association" "team_members_policy" {
 
 # EKS 클러스터 인증 정보를 가져옴
 #  Helm Provider 설정 (EKS와 통신하기 위한 설정)
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
-}
-
-# 헬름 모듈
-provider "helm" {
-  kubernetes {
-    host                   = module.eks.cluster_endpoint
-    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
-  }
-}
-
-# 쿠버 모듈 변경
-provider "kubernetes" {
-  host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
+#data "aws_eks_cluster_auth" "cluster" {
+#  name = module.eks.cluster_name
+#}
+# provier.tf에 helm, kubernetes에 선언. 
+# 위 내용은 data "aws_eks_cluster_auth" 코드는 인증 토큰을 "미리 가져와서" 프로바이더에게 넘겨주기 위해 썼던 것임.
+# provider의 방식은 exec 부분이 인증 토큰을 직접 만들어내는 역할.
 
 # 8. AWS Load Balancer Controller 설치 (Helm Chart)
 
@@ -288,6 +276,7 @@ resource "helm_release" "argocd" {
 
 # 모니터링 스택 (Prometheus + Grafana)
 # =================================================================
+/*
 resource "helm_release" "kube_prometheus_stack" {
   name             = "prometheus-stack"
   repository       = "https://prometheus-community.github.io/helm-charts"
@@ -311,7 +300,7 @@ resource "helm_release" "kube_prometheus_stack" {
     value = "LoadBalancer"
   }
 }
-
+*/
 # =================================================================
 # 6. WAF & ECR
 # =================================================================
@@ -320,6 +309,7 @@ module "waf" {
   source = "./modules/waf"
   name   = var.project_name
 }
+/*
 # ECR (도커 이미지 저장소) - 직접 생성 방식
 # 1. 저장소 생성
 resource "aws_ecr_repository" "app_repo" {
@@ -353,6 +343,10 @@ resource "aws_ecr_lifecycle_policy" "app_repo_policy" {
     ]
   })
 }
+*/
+module "ecr" {
+  source = "./modules/ecr"
+}
 # =================================================================
 # 7. VPN Connection (On-Premise)
 # =================================================================
@@ -364,8 +358,8 @@ module "vpn" {
   private_route_table_ids = module.vpc.private_route_table_ids
 
   # [2] 학교 정보 입력 (팀원에게 받으면 여기를 수정하세요!)
-  school_public_ip = "203.252.xxx.xxx"  # <- 팀원에게 받은 IP
-  school_cidr      = "192.168.xx.0/24"  # <- 팀원에게 받은 CIDR
+  school_public_ip = "203.252.123.123"  # <- 팀원에게 받은 IP
+  school_cidr      = "192.168.10.0/24"  # <- 팀원에게 받은 CIDR
 
   # [3] 태그 설정
   tags = {
@@ -382,17 +376,17 @@ module "vpn" {
 
 # 1. 이미 존재하는 Zone 정보를 읽어옵니다.
 data "aws_route53_zone" "main" {
-  name         = "y.com."  # 끝에 점(.)을 찍는 것이 정석입니다.
+  name         = "soldesk-group4-pbs-project.click."  # 끝에 점(.)을 찍는 것이 정석입니다.
   private_zone = false
 }
 
 # 2. ACM 인증서 (이건 매번 새로 만들어도 됨)
 resource "aws_acm_certificate" "cert" {
-  domain_name       = "y.com"   # ★ 실제 도메인으로 변경
+  domain_name       = "soldesk-group4-pbs-project.click"   # ★ 실제 도메인으로 변경
   validation_method = "DNS"
 
-  # 서브도메인(*.y.com)도 같이 커버하려면 아래 주석 해제
-  # subject_alternative_names = ["*.y.com"]
+  # 서브도메인(*.soldesk-group4-pbs-project.click)도 같이 커버하려면 아래 주석 해제
+  # subject_alternative_names = ["*.soldesk-group4-pbs-project.click"]
 
   tags = {
     Name = "${var.project_name}-cert"

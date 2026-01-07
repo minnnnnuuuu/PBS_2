@@ -3,6 +3,7 @@ variable "name" {}
 # 1. Bastion Host용 역할 및 프로필
 resource "aws_iam_role" "bastion_role" {
   name = "${var.name}-bastion-role"
+  force_detach_policies = true
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -37,6 +38,7 @@ resource "aws_iam_service_linked_role" "eks_nodegroup" {
 # 3. [중요] EKS 노드 그룹용 역할(Role) 정의 (404 에러 해결사)
 resource "aws_iam_role" "eks_node_role" {
   name = "${var.name}-dev-eks-node-role"
+  force_detach_policies = true
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

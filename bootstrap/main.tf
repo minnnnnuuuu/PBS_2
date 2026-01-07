@@ -41,7 +41,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 # 2-1. 도메인 그릇(Zone) 생성
 # 주의: apply 후 나오는 네임서버를 HostingKR에 등록해야 함!
 resource "aws_route53_zone" "main" {
-  name    = "y.com"  # ★ [수정필요] 구매하신 실제 도메인(예: cloudreaminu.cloud)으로 꼭 바꾸세요!
+  name    = "soldesk-group4-pbs-project.click"  # ★ [수정필요] 구매하신 실제 도메인(예: cloudreaminu.cloud)으로 꼭 바꾸세요!
   comment = "Bootstrap: Managed manually for Demo Stability"
 }
 

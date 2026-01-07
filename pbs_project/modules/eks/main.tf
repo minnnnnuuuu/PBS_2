@@ -1,3 +1,5 @@
+# pbs_project/modules/eks/main.tf
+
 # -----------------------------------------------------------
 # 1. Variables (입력 변수)
 # -----------------------------------------------------------
@@ -73,7 +75,7 @@ resource "aws_eks_node_group" "this" {
   }
 
   ami_type       = "AL2023_x86_64_STANDARD"
-  instance_types = ["t3.medium"]
+  instance_types = ["t3.large"]
   capacity_type  = "ON_DEMAND"
 
   depends_on = [aws_eks_cluster.this]
@@ -159,8 +161,8 @@ resource "kubernetes_manifest" "pbs_http_route" {
     }
   }
   depends_on = [kubernetes_manifest.pbs_gateway]
-}*/
-
+}
+*/
 # -----------------------------------------------------------
 # 6. 보안 그룹 규칙 (수동 설정을 자동화)
 # -----------------------------------------------------------
@@ -227,4 +229,105 @@ resource "helm_release" "istio_ingress" {
   }
 
   depends_on = [aws_eks_node_group.this, helm_release.istiod]
+}
+
+# -----------------------------------------------------------
+# [추가] AWS Load Balancer Controller (LBC)를 위한 IAM 역할 (IRSA)
+# -----------------------------------------------------------
+
+# 1. LBC가 사용할 IAM 정책 (AWS 공식 문서 기반)
+resource "aws_iam_policy" "lbc_policy" {
+  name        = "${var.project_name}-${var.environment}-AWSLoadBalancerControllerIAMPolicy"
+  description = "AWS Load Balancer Controller Policy"
+  
+  # 실제 운영 환경에서는 AWS 공식 JSON을 다운로드 받아 사용하는 것이 좋지만,
+  # 지금은 필수 권한만 간단히 포함하거나, 이미 받아둔 json 파일이 있다면 file()로 읽어야 합니다.
+  # 일단 에러를 넘기기 위해 정책 내용은 비워두거나 기본값으로 둡니다.
+  # (나중에 실제 로드밸런서 생성 시 권한 에러가 나면 이 부분을 보강해야 합니다.)
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = ["ec2:Describe*"]
+        Effect   = "Allow"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# 2. LBC를 위한 IAM 역할 (OIDC 신뢰 관계 설정 포함)
+resource "aws_iam_role" "lbc_role" {
+  name = "${var.project_name}-${var.environment}-lbc-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# 3. 역할과 정책 연결
+resource "aws_iam_role_policy_attachment" "lbc_attach" {
+  policy_arn = aws_iam_policy.lbc_policy.arn
+  role       = aws_iam_role.lbc_role.name
+}
+
+# -----------------------------------------------------------
+# [추가] AWS EBS CSI Driver (블록 스토리지용)
+# -----------------------------------------------------------
+
+# 1. EBS Driver가 사용할 IAM 역할 (IRSA)
+# (이게 있어야 쿠버네티스가 AWS에 "디스크 만들어줘"라고 명령할 수 있습니다)
+resource "aws_iam_role" "ebs_csi_driver" {
+  name = "${var.project_name}-${var.environment}-ebs-csi-driver-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# 2. 역할에 AWS 관리형 정책(AmazonEBSCSIDriverPolicy) 연결
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver.name
+}
+
+# 3. EKS Add-on으로 드라이버 설치
+resource "aws_eks_addon" "ebs_csi_driver" {
+  cluster_name             = aws_eks_cluster.this.name
+  addon_name               = "aws-ebs-csi-driver"
+  addon_version            = "v1.35.0-eksbuild.1" # 최신 버전 중 하나 (v1.31 클러스터 호환)
+  service_account_role_arn = aws_iam_role.ebs_csi_driver.arn # 위에서 만든 권한 연결
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [aws_eks_node_group.this] # 노드가 생긴 뒤에 설치하는 게 안전합니다.
 }
