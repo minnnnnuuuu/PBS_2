@@ -398,7 +398,7 @@ module "route53_acm" {
 resource "aws_route53_record" "www" {
   # 모듈이 찾아둔 Zone ID를 가져다 씁니다.
   zone_id = module.route53_acm.zone_id
-  name    = "soldesk-group4-pbs-project.click"
+  name    = "www.soldesk-group4-pbs-project.click"
   type    = "A"
 
   # [추가] "이미 있으면 덮어씌워라" 라는 명령입니다.
@@ -413,6 +413,7 @@ resource "aws_route53_record" "www" {
 }
 # [추가] ArgoCD 서브도메인 연결 (argocd.soldesk...)
 # =================================================================
+
 resource "aws_route53_record" "argocd" {
   # 1. 모듈에서 가져온 Zone ID (기존과 동일)
   zone_id = module.route53_acm.zone_id
