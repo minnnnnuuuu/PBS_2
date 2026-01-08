@@ -22,4 +22,4 @@ spec:
         - --no-autoupdate
         - run
         - --token
-        - {"AccountTag":"5cb7fbd88ad30904bf1b9ee458d36e32","TunnelSecret":"LS6nVkGwk0mCP9xNHNJ64pBQRaAMt4XWjmgqihKrh8I=","TunnelID":"314c6b35-7926-40dc-b271-5780298d197d"
+        - eyJhIjoiNWNiN2ZiZDg4YWQzMDkwNGJmMWI5ZWU0NThkMzZlMzIiLCJ0IjoiMzE0YzZiMzUtNzkyNi00MGRjLWIyNzEtNTc4MDI5OGQxOTdkIiwicyI6IkxTNm5Wa0d3azBtQ1A5eE5ITko2NHBCUVJhQU10NFhXam1ncWloS3JoOEk9In0=
