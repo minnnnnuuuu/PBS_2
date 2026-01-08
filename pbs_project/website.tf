@@ -1,3 +1,6 @@
+/*
+
+
 # 1. 웹사이트 배포 (Deployment) - 실제 서버 띄우기
 resource "kubernetes_deployment" "pbs_web" {
   metadata {
@@ -26,7 +29,8 @@ resource "kubernetes_deployment" "pbs_web" {
 
       spec {
         container {
-          image = "nginx:alpine" # [수정필요] 나중에 팀원이 준 ECR 주소로 바꾸세요! (예: 123...ecr.../pbs-web:latest)
+          # image = "nginx:alpine" # [수정필요] 나중에 팀원이 준 ECR 주소로 바꾸세요! (예: 123...ecr.../pbs-web:latest)
+          image = "198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:latest"
           name  = "pbs-web"
 
           port {
@@ -58,3 +62,5 @@ resource "kubernetes_service" "pbs_web_svc" {
     type = "NodePort" # ALB 인그레스는 보통 NodePort를 사용
   }
 }
+
+*/

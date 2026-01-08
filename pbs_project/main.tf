@@ -209,6 +209,13 @@ resource "helm_release" "aws_lbc" {
   
   # 최신 버전으로 업데이트 (v2.10.0 이상을 사용해야 Gateway API가 잘 돌아갑니다)
   version    = "1.11.0" # LBC App Version v2.11.0 대응 차트
+# 추가---------------------------------------------------------
+    set {
+    name  = "podAnnotations.force-sync"
+    value = timestamp()
+  }
+
+# -----------------------------------------------------------
 
   # [수정 3] Gateway API 활성화 방식 변경
   # "featureGates.GatewayAPI" 대신 "enableGatewayApi"를 사용하는 것이 최신 차트 방식입니다.
@@ -374,51 +381,33 @@ module "vpn" {
 # [수정] Route53 Zone (새로 만드는 게 아니라, 미리 만들어둔 걸 가져옴)
 # =================================================================
 
-# 1. 이미 존재하는 Zone 정보를 읽어옵니다.
-data "aws_route53_zone" "main" {
-  name         = "soldesk-group4-pbs-project.click."  # 끝에 점(.)을 찍는 것이 정석입니다.
-  private_zone = false
+
+# 1. Route53 모듈 호출 (인증서 발급 시킴)
+module "route53_acm" {
+  source       = "./modules/route53"
+  domain_name  = "soldesk-group4-pbs-project.click"
+  project_name = "pbs-project"
 }
 
-# 2. ACM 인증서 (이건 매번 새로 만들어도 됨)
-resource "aws_acm_certificate" "cert" {
-  domain_name       = "soldesk-group4-pbs-project.click"   # ★ 실제 도메인으로 변경
-  validation_method = "DNS"
+# ... (Ingress 리소스가 여기에 있거나 ingress.tf에 있음) ...
 
-  # 서브도메인(*.soldesk-group4-pbs-project.click)도 같이 커버하려면 아래 주석 해제
-  # subject_alternative_names = ["*.soldesk-group4-pbs-project.click"]
+# 2. [완전 자동화 마침표] 최종 연결은 여기서!
+# 이유: Ingress가 생성되어야 ALB 주소가 나오기 때문에, 
+#       모듈보다는 여기서 연결하는 게 의존성 관리에 좋습니다.
 
-  tags = {
-    Name = "${var.project_name}-cert"
-  }
+resource "aws_route53_record" "www" {
+  # 모듈이 찾아둔 Zone ID를 가져다 씁니다.
+  zone_id = module.route53_acm.zone_id
+  name    = "soldesk-group4-pbs-project.click"
+  type    = "A"
 
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# 3. [100% 자동화 핵심] 인증서 검증용 DNS 레코드를 "자동으로" 등록
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
+  # [추가] "이미 있으면 덮어씌워라" 라는 명령입니다.
   allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.main.zone_id # 가져온 Zone ID 사용
+
+  alias {
+    # Ingress가 만든 ALB 주소
+    name                   = kubernetes_ingress_v1.web_ingress.status.0.load_balancer.0.ingress.0.hostname
+    zone_id                = "ZWKZPGTI48KDX" # 서울 리전 ALB Zone ID
+    evaluate_target_health = true
+  }
 }
-
-# 4. ACM 검증 대기 (이게 끝나야 다음 단계로 넘어감)
-resource "aws_acm_certificate_validation" "cert" {
-  certificate_arn         = aws_acm_certificate.cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-
