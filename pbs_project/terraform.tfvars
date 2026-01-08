@@ -10,5 +10,6 @@ team_members = [
   # "arn:aws:iam::198011705652:user/kkh_soldesk",
   "arn:aws:iam::198011705652:user/ssw_soldesk",  # ssw 님
   "arn:aws:iam::198011705652:user/cgy_soldesk",   # cgy 님
-  "arn:aws:iam::198011705652:user/kdh_soldesk"
+  "arn:aws:iam::198011705652:user/kdh_soldesk",
+  "arn:aws:iam::198011705652:user/cmw_soldesk"
 ]
