@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PBS AI Assistant | Intelligent Document Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <div id="drawer-backdrop" onclick="closeDocumentDetail()" 
+         class="fixed inset-0 bg-slate-900/20 z-40 hidden transition-opacity duration-300 opacity-0 backdrop-blur-sm">
+    </div>
+
+    <div id="doc-drawer" 
+         class="fixed top-0 right-0 h-full w-full md:w-[480px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+        
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <div class="flex items-center gap-2 text-slate-500">
+                <i class="fas fa-file-alt"></i>
+                <span class="text-xs font-bold uppercase tracking-wider">Document Details</span>
+            </div>
+            <button onclick="closeDocumentDetail()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 transition text-slate-500">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-8">
+            <div id="drawer-header" class="space-y-2"></div>
+
+            <div class="bg-indigo-50 rounded-xl p-5 border border-indigo-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-2 opacity-10">
+                    <i class="fas fa-robot text-6xl text-indigo-600"></i>
+                </div>
+                <h3 class="flex items-center gap-2 text-indigo-700 font-bold mb-3">
+                    <i class="fas fa-magic"></i> AI 문서 요약
+                </h3>
+                <p id="drawer-summary" class="text-sm text-slate-700 leading-relaxed"></p>
+            </div>
+
+            <div>
+                <h3 class="text-slate-900 font-bold mb-3 flex items-center gap-2">
+                    <i class="fas fa-check-circle text-green-500"></i> 중요 내용 (Key Points)
+                </h3>
+                <ul id="drawer-keypoints" class="space-y-3"></ul>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-xs text-slate-500 border-t border-slate-100 pt-6">
+                <div>
+                    <span class="block font-bold text-slate-400 mb-1">작성자/팀</span>
+                    <span id="drawer-author">PBS DevOps Team</span>
+                </div>
+                <div>
+                    <span class="block font-bold text-slate-400 mb-1">최종 수정</span>
+                    <span id="drawer-date">2024.12.01</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+            <button class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-medium transition shadow-md shadow-indigo-200">
+                <i class="fas fa-download mr-2"></i>문서 열기
+            </button>
+            <button class="px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-100 transition">
+                <i class="fas fa-share-alt"></i>
+            </button>
+        </div>
+    </div>
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 flex-shrink-0 z-10 shadow-sm">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="location.href='index.html'">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
+            <span class="text-lg font-bold tracking-tight text-slate-700">PBS <span class="text-indigo-600">AI</span></span>
+        </div>
+        <button onclick="location.href='index.html'" class="text-sm text-slate-500 hover:text-indigo-600 transition">
+            <i class="fas fa-times mr-1"></i> 나가기
+        </button>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <aside class="w-64 bg-slate-50 border-r border-slate-200 hidden md:flex flex-col">
+            <div class="p-4">
+                <button onclick="location.reload()" class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:border-indigo-300 hover:text-indigo-600 transition shadow-sm">
+                    <i class="fas fa-plus"></i> 새 대화
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-2 space-y-1">
+                <div class="text-xs font-bold text-slate-400 px-3 py-2 uppercase tracking-wider">Today</div>
+                <div class="w-full text-left px-3 py-2 text-sm text-slate-700 bg-white rounded-md border border-slate-100 shadow-sm cursor-pointer">
+                    OpenShift 설치 방법...
+                </div>
+            </div>
+        </aside>
+
+        <section class="flex-1 flex flex-col bg-white relative min-w-0">
+            <div id="chat-container" class="flex-1 overflow-y-auto p-6 bg-slate-50/50 scroll-smooth">
+                <div class="flex items-start gap-4 fade-in">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white flex-shrink-0 mt-1">
+                        <i class="fas fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 max-w-2xl text-slate-700 text-sm leading-relaxed">
+                        안녕하세요, <strong>PBS AI 문서 도우미</strong>입니다. 👋<br>
+                        벤더사의 기술 문서 내용을 요약하거나, 특정 기능의 사용법을 찾아드릴 수 있습니다.
+                        <br><br>
+                        <span class="text-xs text-slate-400">예시: "RedHat OpenShift 4.12 설치 가이드 찾아줘", "EKS 보안 설정 어떻게 해?"</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-white border-t border-slate-200">
+                <div class="max-w-3xl mx-auto relative">
+                    <textarea id="chat-input" rows="1" 
+                        class="w-full pl-4 pr-12 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none overflow-hidden text-sm shadow-inner" 
+                        placeholder="질문을 입력하세요..."
+                        onkeypress="handleEnter(event, sendChatMessage)"></textarea>
+                    <button onclick="sendChatMessage()" class="absolute bottom-2.5 right-2 w-9 h-9 bg-indigo-600 text-white rounded-lg flex items-center justify-center hover:bg-indigo-700 transition shadow-md">
+                        <i class="fas fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+                <div class="text-center mt-2 text-xs text-slate-400">
+                    AI 답변은 실제 문서와 다를 수 있으니 반드시 원본을 확인하세요.
+                </div>
+            </div>
+        </section>
+
+        <aside class="w-80 bg-white border-l border-slate-200 hidden lg:flex flex-col z-20 shadow-xl">
+            <div class="p-4 border-b border-slate-100 font-bold text-slate-700 flex items-center gap-2 bg-slate-50">
+                <i class="fas fa-book-open text-indigo-500"></i> 참고 문서 (Sources)
+            </div>
+            <div id="ref-container" class="flex-1 overflow-y-auto p-4 bg-slate-50/30">
+                <div class="text-center text-slate-400 text-sm mt-10">
+                    <div class="mb-2"><i class="fas fa-search text-2xl opacity-20"></i></div>
+                    질문과 관련된 문서가<br>여기에 표시됩니다.
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Textarea Auto-resize
+        const chatInput = document.getElementById('chat-input');
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') this.style.height = 'auto';
+        });
+    </script>
+</body>
+</html>

@@ -262,7 +262,7 @@ resource "helm_release" "istio_ingress" {
 # -----------------------------------------------------------
 # [추가] AWS Load Balancer Controller (LBC)를 위한 IAM 역할 (IRSA)
 # -----------------------------------------------------------
-
+/*
 # 1. LBC가 사용할 IAM 정책 (AWS 공식 문서 기반)
 resource "aws_iam_policy" "lbc_policy" {
   name        = "${var.project_name}-${var.environment}-AWSLoadBalancerControllerIAMPolicy"
@@ -283,6 +283,21 @@ resource "aws_iam_policy" "lbc_policy" {
     ]
   })
 }
+*/
+# [추가] 1. AWS 공식 정책 파일 다운로드 (이 부분이 새로 들어가야 함!)
+data "http" "lbc_iam_policy" {
+  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.11.0/docs/install/iam_policy.json"
+}
+
+# [수정] 2. 다운로드한 정책을 적용
+resource "aws_iam_policy" "lbc_policy" {
+  name        = "${var.project_name}-${var.environment}-AWSLoadBalancerControllerIAMPolicy"
+  description = "AWS Load Balancer Controller Policy"
+
+  # [변경] 기존의 jsonencode(...)를 지우고 아래 한 줄로 교체!
+  policy = data.http.lbc_iam_policy.response_body
+}
+
 
 # 2. LBC를 위한 IAM 역할 (OIDC 신뢰 관계 설정 포함)
 resource "aws_iam_role" "lbc_role" {

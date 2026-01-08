@@ -137,7 +137,7 @@ output "ecr_repository_url" {
 # 나중에 Ingress(대문) 만들 때 "이 인증서 써라"고 알려줘야 합니다.
 output "acm_certificate_arn" {
   description = "ACM 인증서 ARN (Ingress에 설정 필요)"
-  value       = aws_acm_certificate.cert.arn
+  value       = module.route53_acm.acm_certificate_arn
 }
 
 # [선우님 요청] ECR 주소 출력
