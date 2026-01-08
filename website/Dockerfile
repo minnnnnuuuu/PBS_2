@@ -6,7 +6,9 @@
 FROM nginx:alpine
 
 # 내가 만든 html을 Nginx 기본 폴더로 복사
-COPY index.html /usr/share/nginx/html/index.html
+# COPY index.html /usr/share/nginx/html/index.html
+
+COPY . /usr/share/nginx/html/
 
 # 80번 포트 열기
 EXPOSE 80
