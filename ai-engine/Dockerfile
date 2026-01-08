@@ -6,7 +6,7 @@
 FROM python:3.9-slim
 
 WORKDIR /app
-COPY on-prem/main.py .
+COPY main.py .
 # 통신에 필요한 라이브러리 설치
 RUN pip install fastapi uvicorn httpx pydantic
 

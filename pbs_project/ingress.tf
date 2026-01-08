@@ -21,16 +21,31 @@ resource "kubernetes_ingress_v1" "web_ingress" {
 
   spec {
     rule {
-      # [여기] 우리가 산 도메인 입력!
       host = "soldesk-group4-pbs-project.click"
       
       http {
+        # 1. 메인 접속 (프론트엔드) -> "/"
         path {
           path = "/"
           path_type = "Prefix"
           backend {
             service {
-              name = "pbs-web-service" # 연결할 웹 서비스 이름
+              name = "pbs-web-service"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+
+        # 2. 백엔드 접속 (API) -> "/api"
+        # (주의: 여기 문법을 YAML(:)이 아니라 HCL(=)로 써야 에러가 안 납니다!)
+        path {
+          path = "/api"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "backend-service"
               port {
                 number = 80
               }

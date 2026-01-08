@@ -395,10 +395,10 @@ module "route53_acm" {
 # 이유: Ingress가 생성되어야 ALB 주소가 나오기 때문에, 
 #       모듈보다는 여기서 연결하는 게 의존성 관리에 좋습니다.
 
-resource "aws_route53_record" "www" {
+resource "aws_route53_record" "root" {
   # 모듈이 찾아둔 Zone ID를 가져다 씁니다.
   zone_id = module.route53_acm.zone_id
-  name    = "www.soldesk-group4-pbs-project.click"
+  name    = "soldesk-group4-pbs-project.click"
   type    = "A"
 
   # [추가] "이미 있으면 덮어씌워라" 라는 명령입니다.
