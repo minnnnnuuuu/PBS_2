@@ -41,3 +41,46 @@ resource "kubernetes_ingress_v1" "web_ingress" {
     }
   }
 }
+
+# 1. ArgoCD용 Ingress (네임스페이스가 'argocd'인 점 주의!)
+resource "kubernetes_ingress_v1" "argocd_ingress" {
+  metadata {
+    name      = "argocd-ingress"
+    namespace = "argocd"  # ★중요: ArgoCD는 보통 이 방에 설치됩니다.
+    annotations = {
+      "kubernetes.io/ingress.class"           = "alb"
+      "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type" = "ip"
+      
+      # ArgoCD는 자체적으로 HTTPS를 써서, 백엔드 프로토콜을 HTTPS로 맞춰야 할 수도 있음
+      "alb.ingress.kubernetes.io/backend-protocol" = "HTTPS"
+      
+      # 인증서 (모듈에서 가져온 것 공용 사용)
+      "alb.ingress.kubernetes.io/certificate-arn" = module.route53_acm.acm_certificate_arn
+      
+      # HTTP -> HTTPS 리다이렉트
+      "alb.ingress.kubernetes.io/listen-ports" = jsonencode([{"HTTP": 80}, {"HTTPS": 443}])
+    }
+  }
+
+  spec {
+    rule {
+      host = "argocd.soldesk-group4-pbs-project.click" # 서브도메인
+      
+      http {
+        path {
+          path = "/"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "argocd-server" # 실제 ArgoCD 서비스 이름
+              port {
+                number = 443 # ArgoCD 서비스 포트
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

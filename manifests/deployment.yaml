@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: y-docs-web
+  name: pbs-web-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: y-docs-web
+      app: pbs-web-service
   template:
     metadata:
       labels:
-        app: y-docs-web
+        app: pbs-web-service
     spec:
       containers:
       - name: web-container
         # 태그를 :latest에서 :web-latest로 변경했습니다.
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80

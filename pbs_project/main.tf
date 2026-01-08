@@ -411,3 +411,24 @@ resource "aws_route53_record" "www" {
     evaluate_target_health = true
   }
 }
+# [추가] ArgoCD 서브도메인 연결 (argocd.soldesk...)
+# =================================================================
+resource "aws_route53_record" "argocd" {
+  # 1. 모듈에서 가져온 Zone ID (기존과 동일)
+  zone_id = module.route53_acm.zone_id
+  
+  # 2. ArgoCD용 서브도메인
+  name    = "argocd.soldesk-group4-pbs-project.click"
+  type    = "A"
+
+  # [중요] 기존에 팀원이 만든 게 있다면 덮어쓰기 위해 추가
+  allow_overwrite = true
+
+  alias {
+    # 3. 방금 만든 ArgoCD용 Ingress의 ALB 주소를 가져옴
+    # 주의: kubernetes_ingress_v1.argocd_ingress <-- 리소스 이름이 다릅니다!
+    name                   = kubernetes_ingress_v1.argocd_ingress.status.0.load_balancer.0.ingress.0.hostname
+    zone_id                = "ZWKZPGTI48KDX" # 서울 리전 ALB Zone ID (고정값)
+    evaluate_target_health = true
+  }
+}
