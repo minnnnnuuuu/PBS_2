@@ -1,12 +1,13 @@
-FROM ollama/ollama
-EXPOSE 11434
-ENTRYPOINT ["/bin/ollama", "serve"]
+#FROM ollama/ollama
+#EXPOSE 11434
+#ENTRYPOINT ["/bin/ollama", "serve"]
+#---------------------------------------------
 
-# Nginx(웹서버)를 베이스로 사용
-#FROM nginx:alpine
+FROM python:3.9-slim
 
-# 내가 만든 html을 Nginx 기본 폴더로 복사
-#COPY index.html /usr/share/nginx/html/index.html
+WORKDIR /app
+COPY on-prem/main.py .
+# 통신에 필요한 라이브러리 설치
+RUN pip install fastapi uvicorn httpx pydantic
 
-# 80번 포트 열기
-#EXPOSE 80
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
