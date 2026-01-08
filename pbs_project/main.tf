@@ -448,9 +448,9 @@ module "s3_ai_data" {
   bucket_name = "pbs-project-ai-data-${var.environment}-v1"
   
   tags = {
-    Name        = "PBS AI Data"
+    Name        = "PBS-AI-Data"
     Environment = var.environment
-    Role        = "Model & Training Data"
+    Role        = "Model-Training-Data"
   }
 }
 
@@ -465,4 +465,102 @@ module "s3_logs" {
     Environment = var.environment
     Role        = "System Logs"
   }
+}
+
+# =================================================================
+# 10. ArgoCD Repository & Applications (GitOps)
+# =================================================================
+
+# 1) GitHub 리포지토리 등록 (Secret)
+# -----------------------------------------------------------------
+resource "kubernetes_secret" "argocd_repo_secret" {
+  metadata {
+    name      = "pbs-repo-credential" # Secret 이름
+    namespace = "argocd"              # ArgoCD가 설치된 네임스페이스
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+  }
+
+  data = {
+    type      = "git"
+    url       = "https://github.com/minnnnnuuuu/PBS_2.git" # 실제 리포지토리 주소
+    # 제공된 토큰
+    password = var.github_token
+    username  = "minnnnnuuuu"                                # 깃허브 ID
+  }
+
+  type = "Opaque"
+
+  # ArgoCD가 설치된 후에 생성되어야 함
+  depends_on = [helm_release.argocd]
+}
+
+# 2) Application 1: PBS Web Service (구 y-docs-web)
+# -----------------------------------------------------------------
+resource "kubernetes_manifest" "app_web_service" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "pbs-web-service" # [수정됨] y-docs-web -> pbs-web-service
+      namespace = "argocd"
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://github.com/minnnnnuuuu/PBS_2.git"
+        path           = "manifests/eks/apps" # 웹 서비스 매니페스트 경로
+        targetRevision = "HEAD"
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "default"
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true # 리포지토리에서 삭제되면 클러스터에서도 삭제
+          selfHeal = true # 수동 변경 시 자동 복구
+        }
+      }
+    }
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
+# 3) Application 2: PBS AX Platform (AI & Infra)
+# -----------------------------------------------------------------
+resource "kubernetes_manifest" "app_ax_platform" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "pbs-ax-platform"
+      namespace = "argocd"
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://github.com/minnnnnuuuu/PBS_2.git"
+        path           = "manifests/eks/infra" # 인프라(Milvus 등) 매니페스트 경로
+        targetRevision = "HEAD"
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "default"
+      }
+      syncPolicy = {
+        # 인프라 앱은 수동 Sync 권장 (안정성 위함)
+        # 필요 시 syncOptions로 대규모 리소스(ServerSideApply) 지원
+        syncOptions = [
+          "CreateNamespace=true",
+          "ServerSideApply=true", # Milvus 등 큰 리소스 에러 방지 [중요]
+          "PruneLast=true"
+        ]
+      }
+    }
+  }
+
+  depends_on = [helm_release.argocd]
 }

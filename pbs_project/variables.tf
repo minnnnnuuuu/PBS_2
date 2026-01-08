@@ -26,3 +26,8 @@ variable "team_members" {
   type        = list(string)
   default     = []
 }
+variable "github_token" {
+  description = "GitHub Personal Access Token"
+  type        = string
+  sensitive   = true  # 중요: 로그에 안 찍히게 설정
+}

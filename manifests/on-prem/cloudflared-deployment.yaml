@@ -1,9 +1,8 @@
-vi cloudflared-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cloudflared
-  namespace: cloudflare
+  name: cloudflared-eks
+  namespace: kube-system
 spec:
   replicas: 2
   selector:
@@ -22,4 +21,4 @@ spec:
         - --no-autoupdate
         - run
         - --token
-        - eyJhIjoiNWNiN2ZiZDg4YWQzMDkwNGJmMWI5ZWU0NThkMzZlMzIiLCJ0IjoiMzE0YzZiMzUtNzkyNi00MGRjLWIyNzEtNTc4MDI5OGQxOTdkIiwicyI6IkxTNm5Wa0d3azBtQ1A5eE5ITko2NHBCUVJhQU10NFhXam1ncWloS3JoOEk9In0=
+        - eyJhIjoiNWNiN2ZiZDg4YWQzMDkwNGJmMWI5ZWU0NThkMzZlMzIiLCJ0IjoiMDU2MzVhZmYtOTUxMi00ODJhLWE4YTgtZTdhYmE5NzU3NTQ1IiwicyI6IllUUmlaamxpT1dFdFptUm1PQzAwTjJSaExUZzBOVEl0T1RBd01HSXpOVGswWVRkbCJ9
