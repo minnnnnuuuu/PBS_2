@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+httpx
+pydantic
+boto3        # S3 연결용
+pymilvus     # Vector DB 연결용
+python-multipart # 파일 업로드용

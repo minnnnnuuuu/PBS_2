@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        resources:
+          # [수정] GPU 라인 삭제! CPU와 램만 설정
+          requests:
+            memory: "8Gi"  # 최소 8기가 확보
+            cpu: "4"       # CPU 코어 4개
+          limits:
+            memory: "16Gi" # 최대 16기가까지 (모델 크기에 따라 조절)
+            cpu: "8"
+        ports:
+        - containerPort: 11434
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "ollama pull mxbai-embed-large && ollama pull solar:10.7b"]
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+      volumes:
+      - name: ollama-storage
+        hostPath:
+          path: /data/ollama/models
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+spec:
+  selector:
+    app: ollama
+  ports:
+    - protocol: TCP
+      port: 11434
+      targetPort: 11434

@@ -413,7 +413,7 @@ resource "aws_route53_record" "root" {
 }
 # [추가] ArgoCD 서브도메인 연결 (argocd.soldesk...)
 # =================================================================
-
+/*
 resource "aws_route53_record" "argocd" {
   # 1. 모듈에서 가져온 Zone ID (기존과 동일)
   zone_id = module.route53_acm.zone_id
@@ -431,5 +431,38 @@ resource "aws_route53_record" "argocd" {
     name                   = kubernetes_ingress_v1.argocd_ingress.status.0.load_balancer.0.ingress.0.hostname
     zone_id                = "ZWKZPGTI48KDX" # 서울 리전 ALB Zone ID (고정값)
     evaluate_target_health = true
+  }
+}
+*/
+
+
+# =================================================================
+# 9. AI Data Storage (S3 Buckets)
+# =================================================================
+
+# 1) AI 모델 및 학습 데이터 저장용
+module "s3_ai_data" {
+  source = "./modules/s3"
+
+  # 버킷 이름은 전 세계 유일해야 하므로 환경변수 등을 섞습니다.
+  bucket_name = "pbs-project-ai-data-${var.environment}-v1"
+  
+  tags = {
+    Name        = "PBS AI Data"
+    Environment = var.environment
+    Role        = "Model & Training Data"
+  }
+}
+
+# 2) 시스템 로그 저장용
+module "s3_logs" {
+  source = "./modules/s3"
+
+  bucket_name = "pbs-project-logs-${var.environment}-v1"
+  
+  tags = {
+    Name        = "PBS Logs"
+    Environment = var.environment
+    Role        = "System Logs"
   }
 }
