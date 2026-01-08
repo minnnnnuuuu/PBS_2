@@ -155,3 +155,22 @@ async def upload_file(file: UploadFile = File(...)):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@app.get("/api/documents")
+def list_documents():
+    try:
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET)
+        docs = []
+        if 'Contents' in response:
+            for i, obj in enumerate(response['Contents']):
+                docs.append({
+                    "id": i,
+                    "title": obj['Key'], # 파일명
+                    "type": obj['Key'].split('.')[-1], # 확장자
+                    "date": obj['LastModified'].strftime("%Y-%m-%d"),
+                    "vendor": "Vendor", # 메타데이터가 없으면 임시값
+                    "summary": "서버에 저장된 문서입니다."
+                })
+        return docs
+    except Exception as e:
+        print(f"S3 Error: {e}")
+        return []
