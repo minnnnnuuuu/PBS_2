@@ -3,8 +3,10 @@ name: Hybrid Service Build and Push (AI Engine)
 on:
   push:
     branches: [ "main" ]
+    # AI 관련 파일이나 매니페스트가 바뀌면 무조건 빌드되도록 설정합니다.
     paths:
-      - 'manifests/Dockerfile' # 하이브리드 도커파일 변경시에만 작동 (선택 사항)
+      - 'manifests/**'
+      - 'Dockerfile'
 
 jobs:
   deploy:
@@ -28,13 +30,14 @@ jobs:
     - name: 4. 하이브리드 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: hybrid-service # 또는 pbs-project-repo
-        IMAGE_TAG: ai-latest # 태그를 'ai-latest'로 고정하여 구분
+        ECR_REPOSITORY: hybrid-service # AI 전용 리포지토리 이름 확인
+        IMAGE_TAG: ai-latest
       run: |
-        # manifests 폴더를 빌드 컨텍스트로 지정하여 그 안의 Dockerfile을 사용합니다.
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG manifests/
+        # 루트 폴더 또는 manifests 폴더에 있는 AI용 Dockerfile을 사용하여 빌드합니다.
+        # 현재 구조에 맞춰 '.' 또는 폴더명을 지정하세요.
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         
-        # 빌드된 하이브리드 이미지를 전송합니다.
+        # 빌드된 AI 이미지를 전송합니다.
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         
-        echo "✅ 하이브리드 서비스(ai-latest) 전송 완료!"
+        echo "✅ AI 엔진 이미지(ai-latest) 전송 완료!"
