@@ -5,7 +5,7 @@
 # Nginx(웹서버)를 베이스로 사용
 FROM nginx:alpine
 
-# 내가 만든 html을 Nginx 기본 폴더로 복사
+# 내가 만든 html을 Nginx 기본 폴더로 복사함
 # COPY index.html /usr/share/nginx/html/index.html
 
 COPY . /usr/share/nginx/html/

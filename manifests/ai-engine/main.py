@@ -128,7 +128,7 @@ async def chat(request: QueryRequest):
         response = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
         return {"answer": response.json().get("response", ""), "context": found_text}
 
-# [문서 업로드] 초기 데이터 넣을 때 사용함
+# [문서 업로드] 초기 데이터 넣을 때 사용
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
