@@ -1,3 +1,14 @@
+# 1. ServiceAccount (테라폼 담당자가 이미 생성했다면 이 블록은 제외해도 됩니다)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hybrid-ai-sa
+  namespace: default
+  annotations:
+    # 테라폼 담당자가 공유해준 ARN 주소입니다.
+    eks.amazonaws.com/role-arn: arn:aws:iam::198011705652:role/hybrid-ai-sa-role
+---
+# 2. Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,25 +35,22 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 80
-          # [HPA 작동을 위한 필수 리소스 설정]
           resources:
             requests:
-              cpu: "100m"     # 평소 최소 0.1 코어 사용
-              memory: "128Mi" # 최소 128MB 메모리 사용
+              cpu: "100m"
+              memory: "128Mi"
             limits:
-              cpu: "500m"     # 최대 0.5 코어까지만 허용
-              memory: "512Mi" # 최대 512MB까지만 허용
-          # [AI 엔진 및 S3 연동을 위한 환경 변수]
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: OLLAMA_URL
-              value: "https://api.cloudreaminu.cloud" # 성공했던 온프레미스 주소
+              value: "https://api.cloudreaminu.cloud"
             - name: MILVUS_HOST
-              value: "milvus-standalone"
+              value: "milvus-standalone" # 실제 서비스 이름인지 재확인 필요
             - name: S3_BUCKET_NAME
-              value: "pbs-project-ai-data-dev-v1"
-            # AWS 권한 (미리 생성할 aws-secret 참조)
-
+              value: "pbs-project-ai-data-dev-v1" # 실제 버킷 이름인지 재확인 필요
 ---
+# 3. Service
 apiVersion: v1
 kind: Service
 metadata:
