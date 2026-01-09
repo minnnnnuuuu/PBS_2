@@ -17,6 +17,7 @@ spec:
       labels:
         app: hybrid-ai
     spec:
+      serviceAccountName: hybrid-ai-sa
       containers:
         - name: ai-app
           image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest
@@ -36,20 +37,11 @@ spec:
             - name: OLLAMA_URL
               value: "https://api.cloudreaminu.cloud" # 성공했던 온프레미스 주소
             - name: MILVUS_HOST
-              value: "milvus-service"
+              value: "milvus-standalone"
             - name: S3_BUCKET_NAME
-              value: "pbs-project-data-dev-v1"
+              value: "pbs-project-ai-data-dev-v1"
             # AWS 권한 (미리 생성할 aws-secret 참조)
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: AWS_ACCESS_KEY_ID
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: AWS_SECRET_ACCESS_KEY
+
 ---
 apiVersion: v1
 kind: Service
