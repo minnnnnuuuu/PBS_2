@@ -14,7 +14,7 @@ app = FastAPI()
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama-service:11434")
 MILVUS_HOST = os.getenv("MILVUS_HOST", "milvus-service") # K8s 서비스 이름
 MILVUS_PORT = "19530"
-S3_BUCKET = os.getenv("S3_BUCKET_NAME", "pbs-project-data-dev-v1")
+S3_BUCKET = os.getenv("S3_BUCKET_NAME", "pbs-project-ai-data-dev-v1")
 AWS_REGION = "ap-northeast-2"
 
 # 모델 설정

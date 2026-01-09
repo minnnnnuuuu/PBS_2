@@ -29,6 +29,8 @@ resource "kubernetes_deployment" "pbs_app" {
           image = "198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest" # 접속 시 예쁜 화면을 보여주는 이미지
           name  = "pbs-app"
 
+          image_pull_policy = "Always"
+
           port {
             container_port = 80
           }
