@@ -1,4 +1,3 @@
-vi cloudflared-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,4 +21,4 @@ spec:
         - --no-autoupdate
         - run
         - --token
-        - eyJhIjoiNWNiN2ZiZDg4YWQzMDkwNGJmMWI5ZWU0NThkMzZlMzIiLCJ0IjoiMzE0YzZiMzUtNzkyNi00MGRjLWIyNzEtNTc4MDI5OGQxOTdkIiwicyI6IkxTNm5Wa0d3azBtQ1A5eE5ITko2NHBCUVJhQU10NFhXam1ncWloS3JoOEk9In0=
+        - eyJhIjoiNWNiN2ZiZDg4YWQzMDkwNGJmMWI5ZWU0NThkMzZlMzIiLCJ0IjoiMDdjMmVjYzgtNDgxYS00ZmRhLTk1MTYtYWFjYjg0MTQ5MjA0IiwicyI6Ik9HSXpaalEzTkRBdE5tVTVZUzAwWVRJd0xXRmhNVEF0TVdWbVpEQmlaVEl4WldRMyJ9
