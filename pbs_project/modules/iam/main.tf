@@ -1,9 +1,9 @@
 variable "name" {}
 # [1] 변수 선언 추가 (파일 맨 위나 아래에 추가)
-variable "oidc_provider_arn" {
-  description = "EKS OIDC Provider ARN passed from root"
-  type        = string
-}
+#variable "oidc_provider_arn" {
+#  description = "EKS OIDC Provider ARN passed from root"
+#  type        = string
+#}
 # 1. Bastion Host용 역할 및 프로필
 resource "aws_iam_role" "bastion_role" {
   name = "${var.name}-bastion-role"
@@ -98,52 +98,3 @@ resource "aws_iam_role_policy_attachment" "lbc_gateway_attach" {
   policy_arn = aws_iam_policy.lbc_gateway_policy.arn
 }
 
-resource "aws_iam_policy" "s3_access_policy" {
-  name        = "pbs-ai-s3-access-policy"
-  description = "Allow AI service to access S3 bucket"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:GetObject",
-          "s3:ListBucket",
-          "s3:PutObject" # 업로드 기능도 있다면 필요
-        ]
-        Effect   = "Allow"
-        Resource = [
-          "arn:aws:s3:::pbs-project-ai-data-dev-v1",      # 버킷 자체
-          "arn:aws:s3:::pbs-project-ai-data-dev-v1/*"    # 버킷 내 모든 파일
-        ]
-      }
-    ]
-  })
-}
-
-module "irsa_role" {
-  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  role_name = "hybrid-ai-sa-role"
-
-  role_policy_arns = {
-    policy = aws_iam_policy.s3_access_policy.arn
-  }
-
-  oidc_providers = {
-    main = {
-      provider_arn               = var.oidc_provider_arn
-      namespace_service_accounts = ["default:hybrid-ai-sa"] # ★ 핵심: default 네임스페이스의 hybrid-ai-sa 만 허용
-    }
-  }
-}
-
-resource "kubernetes_service_account" "hybrid_ai_sa" {
-  metadata {
-    name      = "hybrid-ai-sa"
-    namespace = "default"
-    annotations = {
-      # 이 주석이 있어야 AWS 권한을 빌려올 수 있습니다.
-      "eks.amazonaws.com/role-arn" = module.irsa_role.iam_role_arn
-    }
-  }
-}

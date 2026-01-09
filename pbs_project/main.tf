@@ -40,7 +40,7 @@ module "secrets_manager" {
 module "iam" {
   source = "./modules/iam"
   name   = var.project_name
-  oidc_provider_arn = module.eks.oidc_provider_arn
+  # oidc_provider_arn = module.eks.oidc_provider_arn
 }
 
 # Bastion Host (관리용 서버)
@@ -91,6 +91,57 @@ module "rds" {
   # But pw가 아직 저장되지 않았거나 secret이 완전히 준비되지 않아서, 리소스를 찾을 수 없는 에러
   depends_on = [module.secrets_manager]
 }
+# pbs_project/main.tf 맨 아래
+
+# 1. 정책 붙여넣기 (그대로)
+resource "aws_iam_policy" "s3_access_policy" {
+  name        = "pbs-ai-s3-access-policy"
+  description = "Allow AI service to access S3 bucket"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = ["s3:GetObject", "s3:ListBucket", "s3:PutObject"]
+        Effect   = "Allow"
+        Resource = ["arn:aws:s3:::pbs-project-ai-data-dev-v1", "arn:aws:s3:::pbs-project-ai-data-dev-v1/*"]
+      }
+    ]
+  })
+}
+
+# 2. 역할 모듈 붙여넣기
+module "irsa_role" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.0"
+  role_name = "hybrid-ai-sa-role"
+
+  role_policy_arns = {
+    policy = aws_iam_policy.s3_access_policy.arn
+  }
+
+  oidc_providers = {
+    main = {
+      # ❌ 수정 전: provider_arn = var.oidc_provider_arn
+      # ✅ 수정 후: 루트 파일이므로 module.eks를 바로 봅니다.
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["default:hybrid-ai-sa"]
+    }
+  }
+}
+
+# 3. 아까 옮겨둔 Service Account (수정할 부분 있음!)
+resource "kubernetes_service_account" "hybrid_ai_sa" {
+  metadata {
+    name      = "hybrid-ai-sa"
+    namespace = "default"
+    annotations = {
+      # ❌ 수정 전: module.iam.irsa_role_arn
+      # ✅ 수정 후: 바로 위에 있는 module.irsa_role을 참조
+      "eks.amazonaws.com/role-arn" = module.irsa_role.iam_role_arn
+    }
+  }
+}
+
 
 # =================================================================
 # 4. EKS Cluster
