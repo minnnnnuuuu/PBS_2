@@ -19,11 +19,37 @@ spec:
     spec:
       containers:
         - name: ai-app
-          # [중요] 아까 논의한 대로 :ai-latest 태그를 사용하는 것이 좋습니다.
           image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+          # [HPA 작동을 위한 필수 리소스 설정]
+          resources:
+            requests:
+              cpu: "100m"     # 평소 최소 0.1 코어 사용
+              memory: "128Mi" # 최소 128MB 메모리 사용
+            limits:
+              cpu: "500m"     # 최대 0.5 코어까지만 허용
+              memory: "512Mi" # 최대 512MB까지만 허용
+          # [AI 엔진 및 S3 연동을 위한 환경 변수]
+          env:
+            - name: OLLAMA_URL
+              value: "https://api.cloudreaminu.cloud" # 성공했던 온프레미스 주소
+            - name: MILVUS_HOST
+              value: "milvus-service"
+            - name: S3_BUCKET_NAME
+              value: "pbs-project-data-dev-v1"
+            # AWS 권한 (미리 생성할 aws-secret 참조)
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: AWS_SECRET_ACCESS_KEY
 ---
 apiVersion: v1
 kind: Service
@@ -35,7 +61,6 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1"
 spec:
-  # 현재 LoadBalancer로 되어 있으나, 나중에 비용 절감을 위해 ClusterIP로 변경을 고려해보세요.
   type: LoadBalancer
   selector:
     app: hybrid-ai
