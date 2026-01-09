@@ -40,6 +40,7 @@ module "secrets_manager" {
 module "iam" {
   source = "./modules/iam"
   name   = var.project_name
+  oidc_provider_arn = module.eks.oidc_provider_arn
 }
 
 # Bastion Host (관리용 서버)

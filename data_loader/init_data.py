@@ -1,33 +1,30 @@
-import requests
+import boto3
 import os
+from dotenv import load_dotenv
 
-# 백엔드 주소 (Ingress 주소 또는 로컬 포트포워딩 주소)
-API_URL = "http://soldesk-group4-pbs-project.click/api/upload"
-# API_URL = "http://localhost:8000/api/upload" # 로컬 테스트 시
+# .env 파일에서 환경 변수 로드 (없으면 수동으로 설정 가능)
+load_dotenv()
 
-DOCS_DIR = "./sample_docs"
+# S3 설정
+BUCKET_NAME = "pbs-project-ai-data-dev-v1" # 테라폼으로 만든 버킷 이름
+REGION = "ap-northeast-2"
 
-def upload_docs():
-    if not os.path.exists(DOCS_DIR):
-        print(f"❌ '{DOCS_DIR}' 폴더가 없습니다. 텍스트 파일을 먼저 만들어주세요.")
+# S3 클라이언트 생성
+s3 = boto3.client('s3', region_name=REGION)
+
+def upload_sample_docs():
+    source_dir = "./sample_docs"
+    
+    if not os.path.exists(source_dir):
+        print(f"Error: {source_dir} 폴더를 찾을 수 없습니다.")
         return
 
-    for filename in os.listdir(DOCS_DIR):
-        file_path = os.path.join(DOCS_DIR, filename)
-        
+    for filename in os.listdir(source_dir):
+        file_path = os.path.join(source_dir, filename)
         if os.path.isfile(file_path):
-            print(f"📤 업로드 중: {filename} ...")
-            try:
-                with open(file_path, "rb") as f:
-                    files = {"file": (filename, f, "text/plain")}
-                    response = requests.post(API_URL, files=files)
-                
-                if response.status_code == 200:
-                    print(f"✅ 성공: {response.json()['message']}")
-                else:
-                    print(f"❌ 실패: {response.text}")
-            except Exception as e:
-                print(f"🚨 에러 발생: {e}")
+            print(f"Uploading {filename} to S3...")
+            s3.upload_file(file_path, BUCKET_NAME, filename)
+            print(f"Successfully uploaded {filename}")
 
 if __name__ == "__main__":
-    upload_docs()
+    upload_sample_docs()

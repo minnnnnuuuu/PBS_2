@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
     # AI 관련 소스나 온프레미스 설정이 바뀔 때만 실행됩니다.
     paths:
-      - 'ai-engine/**'
+      - 'manifests/ai-engine/**'
       - 'manifests/on-prem/**'
 
 jobs:

@@ -24,8 +24,9 @@ resource "kubernetes_deployment" "pbs_app" {
       }
 
       spec {
+        service_account_name = "hybrid-ai-sa"
         container {
-          image = "nginxdemos/hello" # 접속 시 예쁜 화면을 보여주는 이미지
+          image = "198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest" # 접속 시 예쁜 화면을 보여주는 이미지
           name  = "pbs-app"
 
           port {
