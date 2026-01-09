@@ -322,3 +322,24 @@ function closeDocumentDetail() {
     backdrop.classList.add('opacity-0');
     setTimeout(() => { backdrop.classList.add('hidden'); }, 300);
 }
+async function uploadDocument(input) {
+    if (!input.files || input.files[0] === undefined) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const response = await fetch(`${API_BASE}/upload`, {
+            method: "POST",
+            body: formData
+        });
+        if (response.ok) {
+            alert("업로드 및 학습 성공!");
+            location.reload(); // 목록 새로고침
+        } else {
+            alert("업로드 실패: " + await response.text());
+        }
+    } catch (error) {
+        console.error("Upload Error:", error);
+    }
+}

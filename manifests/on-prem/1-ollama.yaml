@@ -18,11 +18,11 @@ spec:
         resources:
           # [수정] GPU 라인 삭제! CPU와 램만 설정
           requests:
-            memory: "8Gi"  # 최소 8기가 확보
-            cpu: "4"       # CPU 코어 4개
+            memory: "2Gi"  # 최소 8기가 확보
+            cpu: "1"       # CPU 코어 4개
           limits:
-            memory: "16Gi" # 최대 16기가까지 (모델 크기에 따라 조절)
-            cpu: "8"
+            memory: "4Gi" # 최대 16기가까지 (모델 크기에 따라 조절)
+            cpu: "2"
         ports:
         - containerPort: 11434
         lifecycle:
