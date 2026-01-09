@@ -35,7 +35,7 @@ spec:
         # [여기! 아래 내용을 추가해 주세요] ===========================
         env:
         - name: S3_BUCKET_NAME
-          value: "pbs-project-data-dev-v1"  # 님께서 생성한 실제 S3 버킷 이름
+          value: "pbs-project-ai-data-dev-v1"  # 님께서 생성한 실제 S3 버킷 이름
         
         - name: MILVUS_HOST
           value: "milvus-standalone"      # 아까 파드 이름이 milvus-standalone 이었으므로 수정!
