@@ -1,19 +1,16 @@
 # -----------------------------------------------------------
-# [최종 수정] EKS 하이브리드 관제 (To 온프레미스 본부)
+# [최종 수정] EKS 하이브리드 관제 및 오토스케일링 설정
 # -----------------------------------------------------------
 
 # 1. 지표 배달부 (Prometheus Agent)
 resource "helm_release" "prometheus_agent" {
-  name             = "prometheus-agent-v3" # [변경] 이름 충돌 방지
+  name             = "prometheus-agent-v3"
   repository       = "https://prometheus-community.github.io/helm-charts"
   chart            = "prometheus"
   namespace        = "monitoring"
   create_namespace = true
-  
-  # [핵심] 테라폼이 무한 대기하지 않게 설정 (에러 방지)
-  wait = false
+  wait             = false
 
-  # [설정] 하드디스크 끄기 + 본사 전송
   values = [<<EOF
 server:
   persistentVolume:
@@ -23,8 +20,6 @@ server:
   global:
     external_labels:
       cluster: "pbs-eks-dev"
-
-# 불필요한 기능 끄기
 alertmanager:
   enabled: false
 pushgateway:
@@ -35,7 +30,6 @@ kubeStateMetrics:
   enabled: true
 EOF
   ]
-
   depends_on = [module.eks]
 }
 
@@ -45,10 +39,8 @@ resource "helm_release" "promtail" {
   repository       = "https://grafana.github.io/helm-charts"
   chart            = "promtail"
   namespace        = "monitoring"
-  create_namespace = true 
-  
-  # 여기도 대기하지 않고 즉시 완료 처리
-  wait = false
+  create_namespace = true
+  wait             = false
 
   values = [<<EOF
 config:
@@ -58,6 +50,25 @@ config:
         cluster: "pbs-eks-dev"
 EOF
   ]
+  depends_on = [module.eks]
+}
+
+# -----------------------------------------------------------
+# [신규 추가] 3. 지표 측정기 (Metrics Server) - HPA 작동 필수
+# -----------------------------------------------------------
+resource "helm_release" "metrics_server" {
+  name       = "metrics-server"
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  namespace  = "kube-system" # 시스템 네임스페이스에 설치
+  version    = "3.11.0"
+  wait       = false
+
+  # EKS에서 노드 지표를 안전하게 읽어오기 위한 필수 설정
+  set {
+    name  = "args"
+    value = "{--kubelet-insecure-tls,--kubelet-preferred-address-types=InternalIP}"
+  }
 
   depends_on = [module.eks]
 }
