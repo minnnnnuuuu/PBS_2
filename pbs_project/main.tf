@@ -40,6 +40,7 @@ module "secrets_manager" {
 module "iam" {
   source = "./modules/iam"
   name   = var.project_name
+  # oidc_provider_arn = module.eks.oidc_provider_arn
 }
 
 # Bastion Host (관리용 서버)
@@ -90,6 +91,57 @@ module "rds" {
   # But pw가 아직 저장되지 않았거나 secret이 완전히 준비되지 않아서, 리소스를 찾을 수 없는 에러
   depends_on = [module.secrets_manager]
 }
+# pbs_project/main.tf 맨 아래
+
+# 1. 정책 붙여넣기 (그대로)
+resource "aws_iam_policy" "s3_access_policy" {
+  name        = "pbs-ai-s3-access-policy"
+  description = "Allow AI service to access S3 bucket"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = ["s3:GetObject", "s3:ListBucket", "s3:PutObject"]
+        Effect   = "Allow"
+        Resource = ["arn:aws:s3:::pbs-project-ai-data-dev-v1", "arn:aws:s3:::pbs-project-ai-data-dev-v1/*"]
+      }
+    ]
+  })
+}
+
+# 2. 역할 모듈 붙여넣기
+module "irsa_role" {
+  source    = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version   = "~> 5.0"
+  role_name = "hybrid-ai-sa-role"
+
+  role_policy_arns = {
+    policy = aws_iam_policy.s3_access_policy.arn
+  }
+
+  oidc_providers = {
+    main = {
+      # ❌ 수정 전: provider_arn = var.oidc_provider_arn
+      # ✅ 수정 후: 루트 파일이므로 module.eks를 바로 봅니다.
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["default:hybrid-ai-sa"]
+    }
+  }
+}
+
+# 3. 아까 옮겨둔 Service Account (수정할 부분 있음!)
+resource "kubernetes_service_account" "hybrid_ai_sa" {
+  metadata {
+    name      = "hybrid-ai-sa"
+    namespace = "default"
+    annotations = {
+      # ❌ 수정 전: module.iam.irsa_role_arn
+      # ✅ 수정 후: 바로 위에 있는 module.irsa_role을 참조
+      "eks.amazonaws.com/role-arn" = module.irsa_role.iam_role_arn
+    }
+  }
+}
+
 
 # =================================================================
 # 4. EKS Cluster
@@ -395,10 +447,10 @@ module "route53_acm" {
 # 이유: Ingress가 생성되어야 ALB 주소가 나오기 때문에, 
 #       모듈보다는 여기서 연결하는 게 의존성 관리에 좋습니다.
 
-resource "aws_route53_record" "www" {
+resource "aws_route53_record" "root" {
   # 모듈이 찾아둔 Zone ID를 가져다 씁니다.
   zone_id = module.route53_acm.zone_id
-  name    = "www.soldesk-group4-pbs-project.click"
+  name    = "soldesk-group4-pbs-project.click"
   type    = "A"
 
   # [추가] "이미 있으면 덮어씌워라" 라는 명령입니다.
@@ -413,7 +465,7 @@ resource "aws_route53_record" "www" {
 }
 # [추가] ArgoCD 서브도메인 연결 (argocd.soldesk...)
 # =================================================================
-
+/*
 resource "aws_route53_record" "argocd" {
   # 1. 모듈에서 가져온 Zone ID (기존과 동일)
   zone_id = module.route53_acm.zone_id
@@ -432,4 +484,135 @@ resource "aws_route53_record" "argocd" {
     zone_id                = "ZWKZPGTI48KDX" # 서울 리전 ALB Zone ID (고정값)
     evaluate_target_health = true
   }
+}
+*/
+
+
+# =================================================================
+# 9. AI Data Storage (S3 Buckets)
+# =================================================================
+
+# 1) AI 모델 및 학습 데이터 저장용
+module "s3_ai_data" {
+  source = "./modules/s3"
+
+  # 버킷 이름은 전 세계 유일해야 하므로 환경변수 등을 섞습니다.
+  bucket_name = "pbs-project-ai-data-${var.environment}-v1"
+  
+  tags = {
+    Name        = "PBS-AI-Data"
+    Environment = var.environment
+    Role        = "Model-Training-Data"
+  }
+}
+
+# 2) 시스템 로그 저장용
+module "s3_logs" {
+  source = "./modules/s3"
+
+  bucket_name = "pbs-project-logs-${var.environment}-v1"
+  
+  tags = {
+    Name        = "PBS Logs"
+    Environment = var.environment
+    Role        = "System Logs"
+  }
+}
+
+# =================================================================
+# 10. ArgoCD Repository & Applications (GitOps)
+# =================================================================
+
+# 1) GitHub 리포지토리 등록 (Secret)
+# -----------------------------------------------------------------
+resource "kubernetes_secret" "argocd_repo_secret" {
+  metadata {
+    name      = "pbs-repo-credential" # Secret 이름
+    namespace = "argocd"              # ArgoCD가 설치된 네임스페이스
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+  }
+
+  data = {
+    type      = "git"
+    url       = "https://github.com/minnnnnuuuu/PBS_2.git" # 실제 리포지토리 주소
+    # 제공된 토큰
+    password = var.github_token
+    username  = "minnnnnuuuu"                                # 깃허브 ID
+  }
+
+  type = "Opaque"
+
+  # ArgoCD가 설치된 후에 생성되어야 함
+  depends_on = [helm_release.argocd]
+}
+
+# 2) Application 1: PBS Web Service (구 y-docs-web)
+# -----------------------------------------------------------------
+resource "kubernetes_manifest" "app_web_service" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "pbs-web-service" # [수정됨] y-docs-web -> pbs-web-service
+      namespace = "argocd"
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://github.com/minnnnnuuuu/PBS_2.git"
+        path           = "manifests/eks/apps" # 웹 서비스 매니페스트 경로
+        targetRevision = "HEAD"
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "default"
+      }
+      syncPolicy = {
+        automated = {
+          prune    = true # 리포지토리에서 삭제되면 클러스터에서도 삭제
+          selfHeal = true # 수동 변경 시 자동 복구
+        }
+      }
+    }
+  }
+
+  depends_on = [helm_release.argocd]
+}
+
+# 3) Application 2: PBS AX Platform (AI & Infra)
+# -----------------------------------------------------------------
+resource "kubernetes_manifest" "app_ax_platform" {
+  manifest = {
+    apiVersion = "argoproj.io/v1alpha1"
+    kind       = "Application"
+    metadata = {
+      name      = "pbs-ax-platform"
+      namespace = "argocd"
+    }
+    spec = {
+      project = "default"
+      source = {
+        repoURL        = "https://github.com/minnnnnuuuu/PBS_2.git"
+        path           = "manifests/eks/infra" # 인프라(Milvus 등) 매니페스트 경로
+        targetRevision = "HEAD"
+      }
+      destination = {
+        server    = "https://kubernetes.default.svc"
+        namespace = "default"
+      }
+      syncPolicy = {
+        # 인프라 앱은 수동 Sync 권장 (안정성 위함)
+        # 필요 시 syncOptions로 대규모 리소스(ServerSideApply) 지원
+        syncOptions = [
+          "CreateNamespace=true",
+          "ServerSideApply=true", # Milvus 등 큰 리소스 에러 방지 [중요]
+          "PruneLast=true"
+        ]
+      }
+    }
+  }
+
+  depends_on = [helm_release.argocd]
 }

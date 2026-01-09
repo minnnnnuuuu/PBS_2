@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: milvus-standalone
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: milvus-standalone
+  template:
+    metadata:
+      labels:
+        app: milvus-standalone
+    spec:
+      containers:
+      - name: milvus
+        image: milvusdb/milvus:v2.3.0
+        command: ["milvus", "run", "standalone"]
+        ports:
+        - containerPort: 19530
+        - containerPort: 9091
+        volumeMounts:
+        - name: milvus-storage
+          mountPath: /var/lib/milvus
+      volumes:
+      - name: milvus-storage
+        persistentVolumeClaim:
+          claimName: milvus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: milvus-service
+  namespace: default
+spec:
+  selector:
+    app: milvus-standalone
+  ports:
+    - protocol: TCP
+      port: 19530
+      targetPort: 19530
+  type: ClusterIP

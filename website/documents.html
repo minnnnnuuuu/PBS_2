@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PBS Docs | 문서 관리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 flex-shrink-0 shadow-sm z-10">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="location.href='index.html'">
+            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-indigo-200 shadow-lg">PBS</div>
+            <span class="text-xl font-bold tracking-tight text-slate-800">Docs Center</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="location.href='index.html'" class="px-4 py-2 text-slate-500 hover:text-indigo-600 font-medium transition">
+                홈으로
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-6 md:p-12 max-w-6xl mx-auto w-full">
+        
+        <div class="flex justify-between items-end mb-8 fade-in">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900 mb-2">문서 보관함</h1>
+                <p class="text-slate-500">등록된 기술 문서를 관리하고 새로운 문서를 AI에게 학습시킵니다.</p>
+            </div>
+            
+            <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium transition shadow-md flex items-center gap-2">
+                <i class="fas fa-cloud-upload-alt"></i> 문서 업로드
+                <input type="file" id="file-uploader" class="hidden" onchange="uploadDocument(this)">
+            </label>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden fade-in" style="animation-delay: 0.1s">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-xs uppercase text-slate-400 font-bold border-b border-slate-100">
+                        <th class="p-5">문서 제목</th>
+                        <th class="p-5">타입</th>
+                        <th class="p-5">등록일</th>
+                        <th class="p-5 text-right">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="doc-table-body">
+                    <tr>
+                        <td colspan="4" class="p-8 text-center text-slate-400">
+                            <i class="fas fa-circle-notch fa-spin mr-2"></i> 데이터 로딩 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        // 페이지 로드 시 문서 목록 불러오기
+        document.addEventListener('DOMContentLoaded', fetchDocuments);
+    </script>
+</body>
+</html>

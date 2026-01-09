@@ -1,5 +1,9 @@
 variable "name" {}
-
+# [1] 변수 선언 추가 (파일 맨 위나 아래에 추가)
+#variable "oidc_provider_arn" {
+#  description = "EKS OIDC Provider ARN passed from root"
+#  type        = string
+#}
 # 1. Bastion Host용 역할 및 프로필
 resource "aws_iam_role" "bastion_role" {
   name = "${var.name}-bastion-role"
@@ -93,3 +97,4 @@ resource "aws_iam_role_policy_attachment" "lbc_gateway_attach" {
   role       = aws_iam_role.eks_node_role.name # 이제 여기서 참조하니까 에러 안 나요!
   policy_arn = aws_iam_policy.lbc_gateway_policy.arn
 }
+

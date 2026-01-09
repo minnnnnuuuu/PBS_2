@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: milvus-service
+spec:
+  selector:
+    app: milvus-standalone
+  ports:
+    - protocol: TCP
+      port: 19530 # 메인 통신 포트
+      targetPort: 19530
+    - protocol: TCP
+      port: 9091  # 관리 포트
+      targetPort: 9091
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: milvus-standalone
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: milvus-standalone
+  template:
+    metadata:
+      labels:
+        app: milvus-standalone
+    spec:
+      containers:
+      - name: milvus
+        image: milvusdb/milvus:v2.3.0
+        command: ["milvus", "run", "standalone"]
+        ports:
+        - containerPort: 19530
+        - containerPort: 9091
+        securityContext:
+          privileged: true  # 파일 쓰기 권한 확보
+          runAsUser: 0      # 루트 권한으로 실행
+        volumeMounts:
+        - name: milvus-storage
+          mountPath: /var/lib/milvus
+      volumes:
+      - name: milvus-storage
+        hostPath:
+          path: /data/milvus # 아까 만든 호스트 폴더 연결
+          type: DirectoryOrCreate
