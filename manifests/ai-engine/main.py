@@ -3,6 +3,7 @@ import time
 import httpx
 import boto3
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import Response
 from pydantic import BaseModel
 from pymilvus import connections, Collection, FieldSchema, CollectionSchema, DataType, utility
 
@@ -171,7 +172,7 @@ def list_documents():
         return []  # 에러 발생 시 빈 리스트를 반환하여 141번 경고를 해결함
     
 
-    @app.get("/api/download/{filename}")
+@app.get("/api/download/{filename}")
 def download_file(filename: str):
     try:
         # S3에서 파일 객체 가져오기
