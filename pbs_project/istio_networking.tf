@@ -97,19 +97,29 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: pbs-vs
-  namespace: default     
+  namespace: default
 spec:
   hosts:
   - "*"
   gateways:
   - istio-system/pbs-gateway
   http:
+  # 1. /api로 시작하는 요청은 백엔드(데이터)로 보낸다
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: pbs-app-service
+        port:
+          number: 80
+  # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보낸다
   - match:
     - uri:
         prefix: /
     route:
     - destination:
-        host: pbs-web-service # [체크] 연결할 서비스 이름 (service.tf 확인 필요)
+        host: pbs-web-service
         port:
           number: 80
 YAML
