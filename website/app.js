@@ -287,59 +287,87 @@ function renderDocTable(docs) {
 /* =========================================
    5. 상세 패널 (Drawer) - 공통 사용
    ========================================= */
-function openDocumentDetail(doc) {
+async function openDocumentDetail(doc) {
     if (!doc) return;
-    // ... (이전 코드와 동일, 요약 내용 없으면 AI 유도 멘트)
+
+    // 1. 기본 정보(헤더, 요약 등) 화면에 표시
     const headerHtml = `
         <span class="inline-block px-2 py-1 rounded bg-slate-100 text-slate-500 text-xs font-bold mb-2 uppercase">${doc.type || 'FILE'}</span>
         <h2 class="text-2xl font-bold text-slate-900 leading-tight break-words">${doc.title}</h2>
         <p class="text-sm text-indigo-600 font-medium mt-1">${doc.vendor || "PBS Docs"}</p>
     `;
-    document.getElementById('drawer-header').innerHTML = headerHtml;
+    const headerEl = document.getElementById('drawer-header');
+    if(headerEl) headerEl.innerHTML = headerHtml;
     
     const summaryText = doc.summary && doc.summary.length > 20 
         ? doc.summary 
         : "이 문서의 AI 요약 정보가 아직 생성되지 않았습니다.<br>AI 어시스턴트에게 요약을 요청해보세요.";
-    document.getElementById('drawer-summary').innerHTML = summaryText;
+    const summaryEl = document.getElementById('drawer-summary');
+    if(summaryEl) summaryEl.innerHTML = summaryText;
 
-    document.getElementById('drawer-keypoints').innerHTML = '<li class="text-slate-400 text-sm">분석 데이터가 없습니다.</li>';
-    document.getElementById('drawer-author').innerText = "Admin";
-    document.getElementById('drawer-date').innerText = doc.date || "Unknown";
+    const keypointsEl = document.getElementById('drawer-keypoints');
+    if(keypointsEl) keypointsEl.innerHTML = '<li class="text-slate-400 text-sm">분석 데이터가 없습니다.</li>';
+    
+    const authorEl = document.getElementById('drawer-author');
+    if(authorEl) authorEl.innerText = "Admin";
+    
+    const dateEl = document.getElementById('drawer-date');
+    if(dateEl) dateEl.innerText = doc.date || "Unknown";
 
+    // ============================================================
+    // [핵심] 문서 내용 미리보기 로직 (버튼 클릭 연결)
+    // ============================================================
+    const contentContainer = document.getElementById('doc-content-container');
+    const contentArea = document.getElementById('doc-content-area');
+    const btnOpen = document.getElementById('btn-open-doc');
+
+    // (1) 초기화: 서랍 열 때마다 내용은 일단 숨김 처리
+    if (contentContainer) contentContainer.classList.add('hidden');
+    if (contentArea) contentArea.innerText = "⏳ 대기 중...";
+
+    // (2) 버튼 이벤트 연결
+    if (btnOpen) {
+        // 기존 이벤트 제거를 위해 버튼을 복제해서 교체
+        const newBtn = btnOpen.cloneNode(true);
+        btnOpen.parentNode.replaceChild(newBtn, btnOpen);
+
+        // 새 클릭 이벤트 설정
+        newBtn.onclick = async () => {
+            console.log("버튼 클릭됨! 내용 가져오기 시작..."); // F12 콘솔 확인용 로그
+
+            // 숨김 해제 (박스 보이기)
+            if (contentContainer) contentContainer.classList.remove('hidden');
+            if (contentArea) contentArea.innerText = "⏳ 문서 내용을 서버에서 불러오는 중...";
+
+            try {
+                // 다운로드 경로 설정 (S3 URL이 없으면 백엔드 프록시 경로 사용)
+                // 주의: 로컬 테스트 중이라면 S3 URL 접근 시 CORS 에러가 날 수 있음
+                const fileUrl = doc.url || `${API_BASE}/download/${doc.filename}`; 
+                console.log("요청 URL:", fileUrl);
+
+                const response = await fetch(fileUrl);
+                if (response.ok) {
+                    const text = await response.text();
+                    contentArea.innerText = text; // 성공!
+                } else {
+                    contentArea.innerText = "❌ 파일 내용을 불러오지 못했습니다.\n(파일 경로가 올바르지 않거나 S3 권한 문제입니다)";
+                }
+            } catch (error) {
+                console.error(error);
+                contentArea.innerText = `❌ 네트워크 오류 발생: ${error.message}`;
+            }
+        };
+    }
+    // ============================================================
+
+    // Drawer 열기 애니메이션
     const backdrop = document.getElementById('drawer-backdrop');
     const drawer = document.getElementById('doc-drawer');
-    backdrop.classList.remove('hidden');
-    setTimeout(() => {
-        backdrop.classList.remove('opacity-0');
-        drawer.classList.remove('translate-x-full');
-    }, 10);
-}
-
-function closeDocumentDetail() {
-    const backdrop = document.getElementById('drawer-backdrop');
-    const drawer = document.getElementById('doc-drawer');
-    drawer.classList.add('translate-x-full');
-    backdrop.classList.add('opacity-0');
-    setTimeout(() => { backdrop.classList.add('hidden'); }, 300);
-}
-async function uploadDocument(input) {
-    if (!input.files || input.files[0] === undefined) return;
-    const file = input.files[0];
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-        const response = await fetch(`${API_BASE}/upload`, {
-            method: "POST",
-            body: formData
-        });
-        if (response.ok) {
-            alert("업로드 및 학습 성공!");
-            location.reload(); // 목록 새로고침
-        } else {
-            alert("업로드 실패: " + await response.text());
-        }
-    } catch (error) {
-        console.error("Upload Error:", error);
+    if(backdrop && drawer) {
+        backdrop.classList.remove('hidden');
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            drawer.classList.remove('translate-x-full');
+        }, 10);
     }
 }
