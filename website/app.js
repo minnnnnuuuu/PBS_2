@@ -342,7 +342,7 @@ async function openDocumentDetail(doc) {
             try {
                 // 다운로드 경로 설정 (S3 URL이 없으면 백엔드 프록시 경로 사용)
                 // 주의: 로컬 테스트 중이라면 S3 URL 접근 시 CORS 에러가 날 수 있음
-                const fileUrl = doc.url || `${API_BASE}/download/${doc.filename}`; 
+                const fileUrl = doc.url || `${API_BASE}/download/${doc.filename || doc.title}`; 
                 console.log("요청 URL:", fileUrl);
 
                 const response = await fetch(fileUrl);
