@@ -74,7 +74,7 @@ resource "aws_eks_node_group" "this" {
     min_size     = 1
   }
   tags = {
-    Name = "{var.project_name}-eks-worker-${var.environment}" # 여기에 이름을 넣으세요!
+    Name = "${var.project_name}-eks-worker-${var.environment}" # 여기에 이름을 넣으세요!
   }
 
   ami_type       = "AL2023_x86_64_STANDARD"
