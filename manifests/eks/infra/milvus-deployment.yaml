@@ -27,18 +27,24 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "1000m"
-        # [핵심 수정] 외부 서비스(etcd, S3)와 연결하도록 환경 변수 설정
+        # [최종 수정] Milvus가 내부 기본값(localhost:9000)을 무시하고 S3를 강제 인식하게 합니다.
         env:
           - name: ETCD_ENDPOINTS
             value: "etcd:2379"
           - name: COMMON_STORAGE_TYPE
             value: "S3"
+          - name: S3_ADDRESS
+            value: "s3.ap-northeast-2.amazonaws.com"
+          - name: S3_PORT
+            value: "443"
           - name: S3_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
             value: "ap-northeast-2"
+          - name: S3_USE_SSL
+            value: "true"
           - name: S3_USE_IAM
-            value: "true" # IRSA(Role)를 사용하므로 true
+            value: "true"
           - name: S3_CLOUD_PROVIDER
             value: "aws"
         volumeMounts:
