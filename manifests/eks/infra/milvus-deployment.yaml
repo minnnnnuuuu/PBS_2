@@ -33,7 +33,7 @@ spec:
           - name: COMMON_STORAGE_TYPE
             value: "minio"
           - name: MINIO_ADDRESS
-            value: "s3.ap-northeast-2.amazonaws.com"
+            value: "s3.ap-northeast-2.amazonaws.com:443"
           - name: MINIO_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: MINIO_USE_SSL
