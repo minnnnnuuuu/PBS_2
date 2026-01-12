@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: milvus-standalone
-  namespace: default
 spec:
   replicas: 1
   selector:
@@ -13,6 +12,8 @@ spec:
       labels:
         app: milvus-standalone
     spec:
+      # [핵심 추가] 이 파드가 AWS S3에 접근할 권한(신분증)을 부여합니다.
+      serviceAccountName: hybrid-ai-sa
       containers:
       - name: milvus
         image: milvusdb/milvus:v2.3.0
@@ -20,33 +21,25 @@ spec:
         ports:
         - containerPort: 19530
         - containerPort: 9091
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-        # [최종 수정] Milvus가 내부 기본값(localhost:9000)을 무시하고 S3를 강제 인식하게 합니다.
         env:
           - name: ETCD_ENDPOINTS
             value: "etcd:2379"
           - name: COMMON_STORAGE_TYPE
             value: "S3"
-          - name: S3_ADDRESS
-            value: "s3.ap-northeast-2.amazonaws.com"
-          - name: S3_PORT
-            value: "443"
+          - name: MINIO_ADDRESS
+            value: "s3.ap-northeast-2.amazonaws.com:443"
+          - name: MINIO_BUCKET_NAME
+            value: "pbs-project-ai-data-dev-v1"
+          - name: MINIO_USE_SSL
+            value: "true"
+          - name: MINIO_USE_IAM
+            value: "true"
+          - name: MINIO_CLOUD_PROVIDER
+            value: "aws"
           - name: S3_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
             value: "ap-northeast-2"
-          - name: S3_USE_SSL
-            value: "true"
-          - name: S3_USE_IAM
-            value: "true"
-          - name: S3_CLOUD_PROVIDER
-            value: "aws"
         volumeMounts:
         - name: milvus-storage
           mountPath: /var/lib/milvus
@@ -54,22 +47,3 @@ spec:
       - name: milvus-storage
         persistentVolumeClaim:
           claimName: milvus-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: milvus-service
-  namespace: default
-spec:
-  selector:
-    app: milvus-standalone
-  ports:
-    - name: milvus-port
-      protocol: TCP
-      port: 19530
-      targetPort: 19530
-    - name: metrics-port
-      protocol: TCP
-      port: 9091
-      targetPort: 9091
-  type: ClusterIP
