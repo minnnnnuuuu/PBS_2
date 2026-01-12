@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: milvus-standalone
   namespace: default
+  labels:
+    app: milvus-standalone
 spec:
   replicas: 1
   selector:
@@ -13,7 +15,7 @@ spec:
       labels:
         app: milvus-standalone
     spec:
-      serviceAccountName: hybrid-ai-sa # S3 접근 신분증
+      serviceAccountName: hybrid-ai-sa
       containers:
       - name: milvus
         image: milvusdb/milvus:v2.3.0
@@ -22,12 +24,17 @@ spec:
         - containerPort: 19530
         - containerPort: 9091
         env:
+          # 1. etcd 설정
           - name: ETCD_ENDPOINTS
             value: "etcd:2379"
+
+          # 2. 공통 스토리지 타입 (S3 고정)
           - name: COMMON_STORAGE_TYPE
             value: "S3"
+
+          # 3. S3/MinIO 상세 설정 (주소에서 :443 제거가 핵심 ⭐)
           - name: MINIO_ADDRESS
-            value: "s3.ap-northeast-2.amazonaws.com:443"
+            value: "s3.ap-northeast-2.amazonaws.com"
           - name: MINIO_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: MINIO_USE_SSL
@@ -36,6 +43,8 @@ spec:
             value: "true"
           - name: MINIO_CLOUD_PROVIDER
             value: "aws"
+
+          # 4. Milvus 전용 S3 환경변수 (리전 확인)
           - name: S3_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
