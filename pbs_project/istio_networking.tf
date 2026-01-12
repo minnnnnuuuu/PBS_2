@@ -51,7 +51,7 @@ resource "kubernetes_manifest" "pbs_virtual_service" {
           route = [
             {
               destination = {
-                host = "pbs-app-service"
+                host = "pbs-web-service"
                 port = {
                   number = 80
                 }
