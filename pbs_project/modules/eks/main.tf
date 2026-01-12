@@ -73,6 +73,9 @@ resource "aws_eks_node_group" "this" {
     max_size     = 4
     min_size     = 1
   }
+  tags = {
+    Name = "{var.project_name}-eks-worker-${var.environment}" # 여기에 이름을 넣으세요!
+  }
 
   ami_type       = "AL2023_x86_64_STANDARD"
   instance_types = ["t3.large"]
