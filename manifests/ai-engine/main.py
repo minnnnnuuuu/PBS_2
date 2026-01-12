@@ -169,3 +169,17 @@ def list_documents():
     except Exception as e:
         print(f"S3 List Error: {e}")
         return []  # 에러 발생 시 빈 리스트를 반환하여 141번 경고를 해결함
+    
+
+    @app.get("/api/download/{filename}")
+def download_file(filename: str):
+    try:
+        # S3에서 파일 객체 가져오기
+        file_obj = s3_client.get_object(Bucket=S3_BUCKET, Key=filename)
+        content = file_obj['Body'].read().decode('utf-8')
+        
+        # 텍스트 그대로 반환 (프론트엔드 <pre> 태그에 뿌리기 위함)
+        return Response(content=content, media_type="text/plain")
+    except Exception as e:
+        print(f"Download Error: {e}")
+        raise HTTPException(status_code=404, detail="File not found in S3")
