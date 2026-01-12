@@ -12,6 +12,8 @@ spec:
       labels:
         app: milvus-standalone
     spec:
+      # [핵심 추가] 이 파드가 AWS S3에 접근할 권한(신분증)을 부여합니다.
+      serviceAccountName: hybrid-ai-sa
       containers:
       - name: milvus
         image: milvusdb/milvus:v2.3.0
@@ -24,7 +26,6 @@ spec:
             value: "etcd:2379"
           - name: COMMON_STORAGE_TYPE
             value: "S3"
-          # [핵심] 아래 변수들을 통해 localhost:9000과 a-bucket 설정을 완전히 덮어씁니다.
           - name: MINIO_ADDRESS
             value: "s3.ap-northeast-2.amazonaws.com:443"
           - name: MINIO_BUCKET_NAME
@@ -46,18 +47,3 @@ spec:
       - name: milvus-storage
         persistentVolumeClaim:
           claimName: milvus-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: milvus-service
-spec:
-  selector:
-    app: milvus-standalone
-  ports:
-    - name: milvus-port
-      port: 19530
-      targetPort: 19530
-    - name: metrics-port
-      port: 9091
-      targetPort: 9091
