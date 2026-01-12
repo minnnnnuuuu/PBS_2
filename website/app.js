@@ -63,7 +63,6 @@ async function runMainSearch() {
     listContainer.innerHTML = ''; 
 
     // [검색 로직] 제목(Title)이나 벤더(Vendor)에 검색어가 포함된 문서 찾기
-    // 예: "aws" 검색 -> "AWS EKS Guide.pdf" 발견
     const matchedDocs = ALL_DOCS.filter(doc => 
         (doc.title && doc.title.toLowerCase().includes(query)) || 
         (doc.vendor && doc.vendor.toLowerCase().includes(query))
@@ -341,7 +340,7 @@ async function openDocumentDetail(doc) {
 
             try {
                 // 다운로드 경로 설정 (S3 URL이 없으면 백엔드 프록시 경로 사용)
-                // 주의: 로컬 테스트 중이라면 S3 URL 접근 시 CORS 에러가 날 수 있음
+                // ★ 여기: filename이 없으면 title을 사용하도록 수정됨
                 const fileUrl = doc.url || `${API_BASE}/download/${doc.filename || doc.title}`; 
                 console.log("요청 URL:", fileUrl);
 
@@ -369,5 +368,37 @@ async function openDocumentDetail(doc) {
             backdrop.classList.remove('opacity-0');
             drawer.classList.remove('translate-x-full');
         }, 10);
+    }
+}
+
+// 닫기 함수
+function closeDocumentDetail() {
+    const backdrop = document.getElementById('drawer-backdrop');
+    const drawer = document.getElementById('doc-drawer');
+    if(drawer) drawer.classList.add('translate-x-full');
+    if(backdrop) backdrop.classList.add('opacity-0');
+    setTimeout(() => { if(backdrop) backdrop.classList.add('hidden'); }, 300);
+}
+
+// 파일 업로드 함수
+async function uploadDocument(input) {
+    if (!input.files || input.files[0] === undefined) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const response = await fetch(`${API_BASE}/upload`, {
+            method: "POST",
+            body: formData
+        });
+        if (response.ok) {
+            alert("업로드 및 학습 성공!");
+            location.reload(); // 목록 새로고침
+        } else {
+            alert("업로드 실패: " + await response.text());
+        }
+    } catch (error) {
+        console.error("Upload Error:", error);
     }
 }
