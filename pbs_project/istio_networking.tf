@@ -83,7 +83,7 @@ metadata:
   namespace: istio-system  # 보통 istio-system에 둡니다
 spec:
   selector:
-    istio: ingressgateway # [중요] 기본 Istio 인그레스 컨트롤러를 바라봄
+    istio: ingress # [중요] 기본 Istio 인그레스 컨트롤러를 바라봄
   servers:
   - port:
       number: 80
@@ -97,7 +97,7 @@ apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: pbs-vs
-  namespace: default      # 서비스가 있는 네임스페이스
+  namespace: default     
 spec:
   hosts:
   - "*"
