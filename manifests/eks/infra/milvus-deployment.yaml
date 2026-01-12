@@ -28,11 +28,11 @@ spec:
           - name: ETCD_ENDPOINTS
             value: "etcd:2379"
 
-          # 2. 공통 스토리지 타입 (S3 고정)
+          # 2. 공통 스토리지 타입
           - name: COMMON_STORAGE_TYPE
             value: "S3"
 
-          # 3. S3/MinIO 상세 설정 (주소에서 :443 제거가 핵심 ⭐)
+          # 3. S3/MinIO 상세 설정
           - name: MINIO_ADDRESS
             value: "s3.ap-northeast-2.amazonaws.com"
           - name: MINIO_BUCKET_NAME
@@ -44,11 +44,20 @@ spec:
           - name: MINIO_CLOUD_PROVIDER
             value: "aws"
 
-          # 4. Milvus 전용 S3 환경변수 (리전 확인)
+          # 4. Milvus 전용 S3 환경변수
           - name: S3_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
             value: "ap-northeast-2"
+
+          # 5. 내부 컴포넌트 인식 문제 해결 [추가] ⭐
+          - name: DATA_COORD_ADDRESS
+            value: "localhost:13333"
+          - name: MILVUS_ROOT_PATH
+            value: "milvus"  # S3 버킷 안에 'milvus/' 폴더를 생성하도록 명시
+          - name: K8S_NAMESPACE
+            value: "default"
+
         resources:
           requests:
             memory: "1Gi"
