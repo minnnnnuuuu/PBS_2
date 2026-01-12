@@ -45,7 +45,7 @@ resource "kubernetes_ingress_v1" "web_ingress" {
           path_type = "Prefix"
           backend {
             service {
-              name = "pbs-app-service"
+              name = "hybrid-ai-service"
               port {
                 number = 80
               }

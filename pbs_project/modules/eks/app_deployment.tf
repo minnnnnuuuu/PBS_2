@@ -43,7 +43,7 @@ resource "kubernetes_deployment" "pbs_app" {
 # 2. 애플리케이션 Service (역 만들기)
 resource "kubernetes_service" "pbs_app_service" {
   metadata {
-    name      = "pbs-app-service" # [중요] VirtualService가 찾는 바로 그 이름!
+    name      = "hybrid-ai-service" # [중요] VirtualService가 찾는 바로 그 이름!
     namespace = "default"
   }
 
