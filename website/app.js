@@ -196,7 +196,11 @@ function updateReferences(docs) {
     
     docs.forEach(doc => {
         const div = document.createElement('div');
-        div.className = "bg-white p-3 rounded-lg border border-slate-200 shadow-sm fade-in mb-3";
+        div.className = "bg-white p-3 rounded-lg border border-slate-200 shadow-sm fade-in mb-3 cursor-pointer hover:border-indigo-400 hover:shadow-md transition group";
+        
+        // ★ 핵심: 클릭 시 상세 서랍 열기 연결!
+        div.onclick = () => openDocumentDetail(doc);
+
         div.innerHTML = `
             <div class="flex items-center justify-between mb-1">
                 <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${doc.vendor}</span>
