@@ -32,17 +32,18 @@ spec:
           # S3 저장소 설정 (표준화)
           - name: COMMON_STORAGE_TYPE
             value: "minio"
-          
+          # - name: MINIO_ADDRESS
+          #  value: "s3.ap-northeast-2.amazonaws.com"
           - name: MINIO_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
-          - name: MINIO_USE_SSL
-            value: "true"
-          - name: MINIO_USE_IAM
-            value: "true"
+          #- name: MINIO_USE_SSL
+          #  value: "true"
+          #- name: MINIO_USE_IAM
+          #  value: "true"
           - name: MINIO_CLOUD_PROVIDER
             value: "aws"
-          - name: S3_BUCKET_NAME
-            value: "pbs-project-ai-data-dev-v1"
+          #- name: S3_BUCKET_NAME
+          #  value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
             value: "ap-northeast-2"
 
