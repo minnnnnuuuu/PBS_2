@@ -46,7 +46,7 @@ spec:
             - name: OLLAMA_URL
               value: "https://api.cloudreaminu.cloud"
             - name: MILVUS_HOST
-              value: "milvus-standalone" # 실제 서비스 이름인지 재확인 필요
+              value: "milvus-service" # 실제 서비스 이름인지 재확인 필요
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1" # 실제 버킷 이름인지 재확인 필요
 ---
