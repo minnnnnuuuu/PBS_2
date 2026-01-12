@@ -13,7 +13,10 @@
     <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 flex-shrink-0 shadow-sm z-10">
         <div class="flex items-center gap-2 cursor-pointer" onclick="location.href='index.html'">
             <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-indigo-200 shadow-lg">PBS</div>
-            <span class="text-xl font-bold tracking-tight text-slate-800">Docs Center</span>
+            <span class="text-xl font-bold tracking-tight text-slate-800">
+                Docs Center
+                <span class="ml-2 px-2 py-0.5 rounded bg-red-600 text-white text-xs font-bold align-middle shadow-sm">v1.2</span>
+            </span>
         </div>
         <div class="flex items-center gap-3">
             <button onclick="location.href='index.html'" class="px-4 py-2 text-slate-500 hover:text-indigo-600 font-medium transition">
@@ -58,10 +61,54 @@
 
     </main>
 
+    <div id="drawer-backdrop" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300" onclick="closeDocumentDetail()"></div>
+
+    <aside id="doc-drawer" class="fixed top-0 right-0 w-full md:w-[600px] h-full bg-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+        
+        <button onclick="closeDocumentDetail()" class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 transition z-10">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+
+        <div class="h-full overflow-y-auto p-8 custom-scrollbar">
+            
+            <div id="drawer-header" class="mb-8 mt-4"></div>
+
+            <div class="bg-indigo-50 rounded-xl p-6 mb-8 border border-indigo-100">
+                <h3 class="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
+                    <i class="fas fa-robot text-indigo-600"></i> AI 문서 요약
+                </h3>
+                <p id="drawer-summary" class="text-sm text-slate-700 leading-relaxed"></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-8 border-t border-b border-slate-100 py-6">
+                <div>
+                    <span class="block text-xs text-slate-400 font-bold uppercase mb-1">작성자/팀</span>
+                    <span id="drawer-author" class="text-sm text-slate-700 font-medium">Admin</span>
+                </div>
+                <div>
+                    <span class="block text-xs text-slate-400 font-bold uppercase mb-1">최종 수정</span>
+                    <span id="drawer-date" class="text-sm text-slate-700 font-medium">-</span>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <i class="fas fa-align-left text-slate-400"></i> 문서 내용 미리보기
+                </h3>
+                
+                <div id="doc-content-container" class="hidden mb-4">
+                    <div class="bg-slate-900 rounded-lg p-4 overflow-x-auto">
+                        <pre id="doc-content-area" class="text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"></pre>
+                    </div>
+                </div>
+
+                <button id="btn-open-doc" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2">
+                    <i class="fas fa-download"></i> 문서 내용 가져오기
+                </button>
+            </div>
+        </div>
+    </aside>
+
     <script src="app.js"></script>
-    <script>
-        // 페이지 로드 시 문서 목록 불러오기
-        document.addEventListener('DOMContentLoaded', fetchDocuments);
-    </script>
-</body>
+    </body>
 </html>
