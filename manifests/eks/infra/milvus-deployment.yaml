@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: milvus-standalone
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -12,8 +13,7 @@ spec:
       labels:
         app: milvus-standalone
     spec:
-      # [핵심 추가] 이 파드가 AWS S3에 접근할 권한(신분증)을 부여합니다.
-      serviceAccountName: hybrid-ai-sa
+      serviceAccountName: hybrid-ai-sa # S3 접근 신분증
       containers:
       - name: milvus
         image: milvusdb/milvus:v2.3.0
@@ -40,6 +40,13 @@ spec:
             value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
             value: "ap-northeast-2"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
         volumeMounts:
         - name: milvus-storage
           mountPath: /var/lib/milvus
@@ -47,3 +54,21 @@ spec:
       - name: milvus-storage
         persistentVolumeClaim:
           claimName: milvus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: milvus-service
+  namespace: default
+spec:
+  selector:
+    app: milvus-standalone
+  ports:
+    - name: milvus-port
+      protocol: TCP
+      port: 19530
+      targetPort: 19530
+    - name: metrics-port
+      protocol: TCP
+      port: 9091
+      targetPort: 9091
