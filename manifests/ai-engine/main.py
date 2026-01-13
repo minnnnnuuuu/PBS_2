@@ -61,6 +61,8 @@ def init_milvus():
 @app.on_event("startup")
 async def startup_event():
     try:
+        # [강제 업데이트 확인용 로그 추가]
+        print("🚀 System Update Check: v2.1 (Fixed Indentation)") 
         time.sleep(5)
         init_milvus()
     except Exception as e:
