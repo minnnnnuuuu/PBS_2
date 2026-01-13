@@ -63,7 +63,7 @@ def init_milvus():
 @app.on_event("startup")
 async def startup_event():
     try:
-        print("🚀 System Update: v3.0 (API Paths Restored)")
+        print("🚀 System Update: v4.0 (Increased Timeouts)")
         time.sleep(5)
         init_milvus()
     except Exception as e:
@@ -80,7 +80,8 @@ async def get_embedding(text: str):
             resp = await client.post(
                 f"{OLLAMA_URL}/api/embeddings",
                 json={"model": EMBEDDING_MODEL, "prompt": text},
-                timeout=10.0
+                # [수정] 타임아웃 10초 -> 60초로 증가 (모델 로딩 시간 확보)
+                timeout=60.0
             )
             if resp.status_code != 200:
                 print(f"Embedding API Error: {resp.status_code}")
@@ -93,7 +94,8 @@ async def get_embedding(text: str):
 
 async def get_summary(text: str):
     prompt = f"아래 문서를 한 문장(50자 이내)으로 요약해줘:\n\n{text[:2000]}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    # [수정] 요약 타임아웃 30초 -> 120초로 증가
+    async with httpx.AsyncClient(timeout=120.0) as client:
         try:
             resp = await client.post(f"{OLLAMA_URL}/api/generate",
                                      json={"model": LLM_MODEL, "prompt": prompt, "stream": False})
@@ -109,7 +111,6 @@ def health_check():
     return {"status": "ok", "message": "PBS AI Backend Running"}
 
 
-# [중요] app.js가 /api/upload 로 보내므로 여기도 /api/upload 여야 함
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
@@ -148,7 +149,6 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# [중요] app.js가 /api/chat 으로 보내므로 여기도 /api/chat
 @app.post("/api/chat")
 async def chat(request: QueryRequest):
     try:
@@ -175,7 +175,8 @@ async def chat(request: QueryRequest):
         if not context:
             return {"answer": "관련된 문서를 찾을 수 없습니다.", "context": ""}
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # [수정] 채팅 타임아웃 60초 -> 120초로 증가
+        async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(f"{OLLAMA_URL}/api/generate",
                                      json={
                                          "model": LLM_MODEL,
