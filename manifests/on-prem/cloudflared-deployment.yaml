@@ -20,5 +20,9 @@ spec:
         - tunnel
         - --no-autoupdate
         - run
-        - --token
-        - eyJhIjoiNWNiN2ZiZDg4YWQzMDkwNGJmMWI5ZWU0NThkMzZlMzIiLCJ0IjoiMDdjMmVjYzgtNDgxYS00ZmRhLTk1MTYtYWFjYjg0MTQ5MjA0IiwicyI6Ik9HSXpaalEzTkRBdE5tVTVZUzAwWVRJd0xXRmhNVEF0TVdWbVpEQmlaVEl4WldRMyJ9
+        env:
+        - name: TUNNEL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: cloudflare-token
+              key: token
