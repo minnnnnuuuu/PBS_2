@@ -25,12 +25,11 @@ COLLECTION_NAME = "pbs_docs"
 s3_client = boto3.client("s3", region_name=AWS_REGION)
 
 def init_milvus():
-    """Milvus 연결 및 컬렉션 초기화 (수정됨: 중복 생성 에러 방지)"""
+    """Milvus 연결 및 컬렉션 초기화"""
     try:
         print(f"🔄 Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
         connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
         
-        # [수정 1] 컬렉션이 없을 때만 생성하도록 분기 처리
         if not utility.has_collection(COLLECTION_NAME):
             print(f"🆕 Creating collection: {COLLECTION_NAME}")
             fields = [
@@ -43,7 +42,6 @@ def init_milvus():
             schema = CollectionSchema(fields, "PBS Project Documents")
             collection = Collection(COLLECTION_NAME, schema)
             
-            # 인덱스 생성 (생성 직후 바로 수행)
             index_params = {
                 "metric_type": "COSINE", 
                 "index_type": "IVF_FLAT", 
@@ -54,7 +52,6 @@ def init_milvus():
         else:
             print(f"ℹ️ Collection '{COLLECTION_NAME}' already exists.")
 
-        # [수정 1] 마지막에 확실하게 로드
         Collection(COLLECTION_NAME).load()
         print("✅ Milvus Connected & Collection Loaded!")
         
@@ -109,15 +106,12 @@ async def upload_file(file: UploadFile = File(...)):
     try:
         content = await file.read()
         
-        # [수정 2] 텍스트 파일이 아닌 경우(이미지 등) 업로드만 하고 분석은 스킵
         try:
             text_content = content.decode("utf-8")
         except UnicodeDecodeError:
-            # 텍스트가 아니면 S3에만 올리고 종료
             s3_client.put_object(Bucket=S3_BUCKET, Key=file.filename, Body=content)
             return {"message": "Success (Binary File)", "filename": file.filename, "summary": "분석 불가 (텍스트 아님)"}
 
-        # S3 업로드
         s3_client.put_object(Bucket=S3_BUCKET, Key=file.filename, Body=content)
         
         summary = "요약 대기중"
@@ -125,10 +119,8 @@ async def upload_file(file: UploadFile = File(...)):
             summary = await get_summary(text_content)
             vector = await get_embedding(text_content)
             
-            # [수정 3] Milvus 데이터 삽입 구조 명확화
             if vector and connections.has_connection("default"):
                 collection = Collection(COLLECTION_NAME)
-                # 데이터 구조: [ [col1_list], [col2_list], ... ]
                 data = [
                     [vector],       # embedding
                     [text_content], # text
@@ -153,7 +145,6 @@ async def chat(request: QueryRequest):
         if not query_vector: return {"answer": "AI 엔진 연결 실패 (임베딩 불가)"}
         
         collection = Collection(COLLECTION_NAME)
-        # 로드가 안 되어 있을 경우 대비
         collection.load()
         
         results = collection.search(
@@ -162,7 +153,6 @@ async def chat(request: QueryRequest):
             limit=3, output_fields=["text"]
         )
         
-        # 검색 결과 조합
         context_texts = []
         if results:
             for hits in results:
@@ -211,7 +201,6 @@ def download_file(filename: str):
         file_obj = s3_client.get_object(Bucket=S3_BUCKET, Key=filename)
         content = file_obj['Body'].read()
         
-        # [수정 4] 다운로드 시 디코딩 에러 방지 (바이너리 파일 처리)
         try:
             decoded_content = content.decode('utf-8')
             return Response(content=decoded_content, media_type="text/plain")
