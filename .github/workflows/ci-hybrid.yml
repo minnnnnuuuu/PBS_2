@@ -32,18 +32,20 @@ jobs:
         ECR_REPOSITORY: hybrid-service
         IMAGE_TAG: ai-latest
       run: |
-        # Dockerfile이 있는 경로를 컨텍스트로 지정하여 빌드
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
-        
-        # 빌드된 이미지를 ECR로 전송
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "✅ AI 엔진 이미지(ai-latest) 전송 완료!"
 
-    # [추가] 5. EKS 파드 자동 재시작 (새 이미지 반영)
-    - name: 5. EKS 배포 갱신 (Rollout Restart)
+    # [중요] kubectl 명령어를 쓰기 위해 설치하는 단계 추가
+    - name: 5. kubectl 설치
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: 6. EKS 배포 갱신 (Rollout Restart)
       run: |
-        # EKS 클러스터 접속 설정 (클러스터 이름을 확인해 주세요)
-        aws eks update-kubeconfig --region ap-northeast-2 --name pbs-eks-cluster
+        # [수정됨] 실제 클러스터 이름인 'pbs-project-dev-cluster'로 변경
+        aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
         
         # 새로운 이미지를 가져오도록 배포(Deployment) 재시작
         kubectl rollout restart deployment hybrid-ai-service
