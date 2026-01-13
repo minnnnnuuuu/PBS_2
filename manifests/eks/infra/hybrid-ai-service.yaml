@@ -1,11 +1,10 @@
-# 1. ServiceAccount (테라폼 담당자가 이미 생성했다면 이 블록은 제외해도 됩니다)
+# 1. ServiceAccount
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: hybrid-ai-sa
   namespace: default
   annotations:
-    # 테라폼 담당자가 공유해준 ARN 주소입니다.
     eks.amazonaws.com/role-arn: arn:aws:iam::198011705652:role/hybrid-ai-sa-role
 ---
 # 2. Deployment
@@ -44,11 +43,12 @@ spec:
               memory: "512Mi"
           env:
             - name: OLLAMA_URL
-              value: "https://api.cloudreaminu.cloud"
+              # [수정됨] AWS EKS 내부의 ollama-service로 직접 연결
+              value: "http://ollama-service:11434"
             - name: MILVUS_HOST
-              value: "milvus-standalone" # 실제 서비스 이름인지 재확인 필요
+              value: "milvus-standalone"
             - name: S3_BUCKET_NAME
-              value: "pbs-project-ai-data-dev-v1" # 실제 버킷 이름인지 재확인 필요
+              value: "pbs-project-ai-data-dev-v1"
 ---
 # 3. Service
 apiVersion: v1
