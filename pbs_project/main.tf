@@ -156,6 +156,7 @@ variable "bootstrap_mode" {
 # EKS module
 module "eks" {
   source = "./modules/eks"
+  # rds_endpoint = module.rds.rds_endpoint
 
   project_name = var.project_name
   environment  = var.environment
@@ -167,10 +168,10 @@ module "eks" {
   # 노드는 반드시 Private App Subnet에 배치
   subnet_ids   = module.vpc.private_subnets 
 
+  waf_acl_arn  = module.waf.web_acl_arn
+
   # IAM 모듈(Role 생성)이 완전히 끝날 때까지 기다렸다가 시작
   depends_on = [module.iam]
-
-  waf_acl_arn  = module.waf.web_acl_arn
 }
 
 # [팀원 일괄 등록] terraform.tfvars 파일의 명단을 읽어와 자동 적용

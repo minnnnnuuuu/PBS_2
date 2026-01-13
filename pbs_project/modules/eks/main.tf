@@ -377,3 +377,125 @@ resource "aws_eks_addon" "ebs_csi_driver" {
 
   depends_on = [aws_eks_node_group.this] # 노드가 생긴 뒤에 설치하는 게 안전합니다.
 }
+
+
+# ==========================================================================
+# 1. Milvus 전용 저장소 (PVC)
+resource "kubernetes_persistent_volume_claim" "milvus_pvc" {
+  metadata {
+    name      = "milvus-pvc"
+    namespace = "default"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    storage_class_name = "ebs-sc"
+
+    resources {
+      requests = {
+        storage = "20Gi"
+      }
+    }
+  }
+}
+
+resource "kubernetes_deployment" "milvus_standalone" {
+  metadata {
+    name      = "milvus-standalone"
+    namespace = "default"
+    labels    = { app = "milvus-standalone" }
+  }
+
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "milvus-standalone" } }
+
+    template {
+      metadata { labels = { app = "milvus-standalone" } }
+      spec {
+        service_account_name = "hybrid-ai-sa"
+
+        container {
+          name    = "milvus"
+          image   = "milvusdb/milvus:v2.3.15"
+          command = ["milvus", "run", "standalone"]
+
+          env {
+            name  = "ETCD_ENDPOINTS"
+            value = "etcd.default.svc.cluster.local:2379"
+          }
+          env {
+            name  = "COMMON_STORAGE_TYPE"
+            value = "minio"
+          }
+          env {
+            name  = "MINIO_ADDRESS"
+            value = "s3.ap-northeast-2.amazonaws.com"
+          }
+          env {
+            name  = "MINIO_PORT"
+            value = "443" # ⭐ 9000번 포트 타임아웃 방지
+          }
+          env {
+            name  = "MINIO_BUCKET_NAME"
+            value = "pbs-project-ai-data-dev-v1"
+          }
+          env {
+            name  = "MINIO_USE_SSL"
+            value = "true"
+          }
+          env {
+            name  = "MINIO_USE_IAM"
+            value = "true"
+          }
+          env {
+            name  = "MINIO_CLOUD_PROVIDER"
+            value = "aws"
+          }
+
+          resources {
+            requests = { cpu = "500m", memory = "1Gi" }
+            limits   = { cpu = "1000m", memory = "2Gi" }
+          }
+
+          volume_mount {
+            name       = "milvus-storage"
+            mount_path = "/var/lib/milvus"
+          }
+        }
+        volume {
+          name = "milvus-storage"
+          persistent_volume_claim { claim_name = "milvus-pvc" }
+        }
+      }
+    }
+  }
+}
+
+# 3. Milvus Service
+resource "kubernetes_service" "milvus_standalone" {
+  metadata {
+    name      = "milvus-standalone"
+    namespace = "default"
+  }
+
+  spec {
+    selector = {
+      app = "milvus-standalone"
+    }
+
+    port {
+      name        = "milvus-port"
+      port        = 19530
+      target_port = 19530
+    }
+
+    port {
+      name        = "metrics-port"
+      port        = 9091
+      target_port = 9091
+    }
+
+    type = "ClusterIP"
+  }
+}

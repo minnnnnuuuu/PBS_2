@@ -27,13 +27,13 @@ spec:
         env:
           # etcd 연결
           - name: ETCD_ENDPOINTS
-            value: "etcd:2379"
+            value: "etcd.default.svc.cluster.local:2379"
 
           # S3 저장소 설정 (표준화)
           - name: COMMON_STORAGE_TYPE
             value: "minio"
           - name: MINIO_ADDRESS
-            value: "s3.ap-northeast-2.amazonaws.com:443"
+            value: "s3.ap-northeast-2.amazonaws.com"
           - name: MINIO_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: MINIO_USE_SSL

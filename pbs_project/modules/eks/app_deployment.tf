@@ -33,7 +33,7 @@ resource "kubernetes_deployment" "pbs_app" {
           # [필수] 인수인계 문서에서 강조한 ADDR 환경 변수 ⭐
           env {
             name  = "MILVUS_ADDR"
-            value = "milvus-standalone:19530" # Milvus 서비스 주소
+            value = "milvus-standalone.default.svc.cluster.local:19530" # Milvus 서비스 주소
           }
           env {
             name  = "OLLAMA_ADDR"
@@ -41,7 +41,7 @@ resource "kubernetes_deployment" "pbs_app" {
           }
           env {
             name  = "DATABASE_ADDR"
-            value = "your-db-endpoint" # 필요한 경우 추가
+            value = "pbs-project-cluster.cluster-c7immc08qoyj.ap-northeast-2.rds.amazonaws.com"
           }
 
           # [최적화] t3.large 자원 부족(Insufficient cpu) 해결 ⭐
