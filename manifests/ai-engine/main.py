@@ -104,7 +104,7 @@ async def get_summary(text: str):
 def health_check():
     return {"status": "ok", "message": "PBS AI Backend Running"}
 
-@app.post("/api/upload")
+@app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     try:
         content = await file.read()
@@ -146,7 +146,7 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/chat")
+@app.post("/chat")
 async def chat(request: QueryRequest):
     try:
         query_vector = await get_embedding(request.query)
