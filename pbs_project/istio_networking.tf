@@ -108,6 +108,8 @@ spec:
   - match:
     - uri:
         prefix: /api
+    rewrite:
+      uri: /
     route:
     - destination:
         host: hybrid-ai-service
