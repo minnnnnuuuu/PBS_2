@@ -18,23 +18,22 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
       - name: milvus
-        image: milvusdb/milvus:v2.3.0
+        # 1. 안정적인 최신 패치 버전으로 업데이트 (필수) ⭐
+        image: milvusdb/milvus:v2.3.15
         command: ["milvus", "run", "standalone"]
         ports:
         - containerPort: 19530
         - containerPort: 9091
         env:
-          # 1. etcd 설정
+          # etcd 연결
           - name: ETCD_ENDPOINTS
             value: "etcd:2379"
 
-          # 2. 공통 스토리지 타입 (S3 고정)
+          # S3 저장소 설정 (표준화)
           - name: COMMON_STORAGE_TYPE
-            value: "S3"
-
-          # 3. S3/MinIO 상세 설정 (주소에서 :443 제거가 핵심 ⭐)
+            value: "minio"
           - name: MINIO_ADDRESS
-            value: "s3.ap-northeast-2.amazonaws.com"
+            value: "s3.ap-northeast-2.amazonaws.com:443"
           - name: MINIO_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: MINIO_USE_SSL
@@ -43,12 +42,25 @@ spec:
             value: "true"
           - name: MINIO_CLOUD_PROVIDER
             value: "aws"
-
-          # 4. Milvus 전용 S3 환경변수 (리전 확인)
           - name: S3_BUCKET_NAME
             value: "pbs-project-ai-data-dev-v1"
           - name: S3_REGION
             value: "ap-northeast-2"
+
+          # 내부 컴포넌트 강제 로컬 연결 (이게 다 들어가야 서로 찾습니다) ⭐
+          - name: DATA_COORD_ADDRESS
+            value: "localhost:13333"
+          - name: ROOT_COORD_ADDRESS
+            value: "localhost:53100"
+          - name: QUERY_COORD_ADDRESS
+            value: "localhost:19531"
+          - name: INDEX_COORD_ADDRESS
+            value: "localhost:21121"
+          - name: MILVUS_ROOT_PATH
+            value: "milvus"
+          - name: K8S_NAMESPACE
+            value: "default"
+
         resources:
           requests:
             memory: "1Gi"
@@ -67,7 +79,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: milvus-service
+  name: milvus-standalone
   namespace: default
 spec:
   selector:

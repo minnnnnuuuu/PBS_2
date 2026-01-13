@@ -1,6 +1,7 @@
 # 1. 애플리케이션 Deployment (기차 만들기)
 resource "kubernetes_deployment" "pbs_app" {
   metadata {
+    # 실제 클러스터의 파드 이름과 일치하도록 수정
     name      = "pbs-app-deployment"
     namespace = "default"
     labels = {
@@ -26,8 +27,34 @@ resource "kubernetes_deployment" "pbs_app" {
       spec {
         service_account_name = "hybrid-ai-sa"
         container {
-          image = "198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest" # 접속 시 예쁜 화면을 보여주는 이미지
+          image = "198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest"
           name  = "pbs-app"
+
+          # [필수] 인수인계 문서에서 강조한 ADDR 환경 변수 ⭐
+          env {
+            name  = "MILVUS_ADDR"
+            value = "milvus-standalone:19530" # Milvus 서비스 주소
+          }
+          env {
+            name  = "OLLAMA_ADDR"
+            value = "http://ollama-deployment:11434" # Ollama 서비스 주소
+          }
+          env {
+            name  = "DATABASE_ADDR"
+            value = "your-db-endpoint" # 필요한 경우 추가
+          }
+
+          # [최적화] t3.large 자원 부족(Insufficient cpu) 해결 ⭐
+          resources {
+            requests = {
+              cpu    = "100m"  # 0.1 vCPU로 낮춰서 다른 파드와 공존 가능하게 함
+              memory = "256Mi"
+            }
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+          }
 
           image_pull_policy = "Always"
 
@@ -43,7 +70,7 @@ resource "kubernetes_deployment" "pbs_app" {
 # 2. 애플리케이션 Service (역 만들기)
 resource "kubernetes_service" "pbs_app_service" {
   metadata {
-    name      = "pbs-app-service" # [중요] VirtualService가 찾는 바로 그 이름!
+    name      = "hybrid-ai-service"
     namespace = "default"
   }
 
@@ -57,6 +84,6 @@ resource "kubernetes_service" "pbs_app_service" {
       target_port = 80
     }
 
-    type = "ClusterIP" # 내부 통신용으로 설정 (Istio가 밖에서 연결해줌)
+    type = "ClusterIP"
   }
 }

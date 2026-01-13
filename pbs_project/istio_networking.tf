@@ -110,7 +110,7 @@ spec:
         prefix: /api
     route:
     - destination:
-        host: pbs-app-service
+        host: hybrid-ai-service
         port:
           number: 80
   # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보낸다
