@@ -138,7 +138,18 @@ resource "null_resource" "apply_istio_resources" {
     # 윈도우 PowerShell용 명령
     command = <<EOT
       aws eks update-kubeconfig --region ap-northeast-2 --name ${module.eks.cluster_name}
+      #kubectl apply -f ${local_file.istio_manifest.filename}
+
+      # 2. [추가] 네임스페이스에 Istio 주입 라벨 설정 (Terraform이 실행할 때마다 수행)
+      kubectl label namespace default istio-injection=enabled --overwrite
+
+      # 3. Istio Gateway & VirtualService 적용
       kubectl apply -f ${local_file.istio_manifest.filename}
+
+      # 4. [추가] 사이드카 주입을 위해 디플로이먼트 강제 재시작
+      kubectl rollout restart deployment hybrid-ai-service
+      kubectl rollout restart deployment pbs-app-deployment
+      kubectl rollout restart deployment pbs-web-service
     EOT
     
     interpreter = ["PowerShell", "-Command"]
