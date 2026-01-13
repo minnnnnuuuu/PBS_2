@@ -377,3 +377,143 @@ resource "aws_eks_addon" "ebs_csi_driver" {
 
   depends_on = [aws_eks_node_group.this] # 노드가 생긴 뒤에 설치하는 게 안전합니다.
 }
+
+
+# ==========================================================================
+resource "kubernetes_persistent_volume_claim" "milvus_pvc" {
+  metadata {
+    name      = "milvus-pvc"
+    namespace = "default"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    storage_class_name = "ebs-sc" # EBS Storage Class 사용
+
+    resources {
+      requests = {
+        storage = "20Gi"
+      }
+    }
+  }
+}
+
+# 1. Milvus Deployment (본체)
+resource "kubernetes_deployment" "milvus_standalone" {
+  metadata {
+    name      = "milvus-standalone"
+    namespace = "default"
+    labels = {
+      app = "milvus-standalone"
+    }
+  }
+
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "milvus-standalone"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "milvus-standalone"
+        }
+      }
+
+      spec {
+        service_account_name = "hybrid-ai-sa" # IAM Role이 연결된 SA
+
+        container {
+          name  = "milvus"
+          image = "milvusdb/milvus:v2.3.15"
+          command = ["milvus", "run", "standalone"]
+
+          port {
+            container_port = 19530
+          }
+          port {
+            container_port = 9091
+          }
+
+          # etcd 연결
+          env {
+            name  = "ETCD_ENDPOINTS"
+            value = "etcd.default.svc.cluster.local:2379"
+          }
+
+          # S3 저장소 설정 (표준)
+          env { name = "COMMON_STORAGE_TYPE"; value = "minio" }
+          env { name = "MINIO_ADDRESS"; value = "s3.ap-northeast-2.amazonaws.com" } # :443 제거됨
+          env { name = "MINIO_BUCKET_NAME"; value = "pbs-project-ai-data-dev-v1" }
+          env { name = "MINIO_USE_SSL"; value = "true" }
+          env { name = "MINIO_USE_IAM"; value = "true" }
+          env { name = "MINIO_CLOUD_PROVIDER"; value = "aws" }
+          env { name = "S3_BUCKET_NAME"; value = "pbs-project-ai-data-dev-v1" }
+          env { name = "S3_REGION"; value = "ap-northeast-2" }
+
+          # 내부 컴포넌트 강제 로컬 연결 (내부 통신 최적화)
+          env { name = "DATA_COORD_ADDRESS"; value = "localhost:13333" }
+          env { name = "ROOT_COORD_ADDRESS"; value = "localhost:53100" }
+          env { name = "QUERY_COORD_ADDRESS"; value = "localhost:19531" }
+          env { name = "INDEX_COORD_ADDRESS"; value = "localhost:21121" }
+          env { name = "MILVUS_ROOT_PATH"; value = "milvus" }
+          env { name = "K8S_NAMESPACE"; value = "default" }
+
+          resources {
+            requests = {
+              cpu    = "500m"
+              memory = "1Gi"
+            }
+            limits = {
+              cpu    = "1000m"
+              memory = "2Gi"
+            }
+          }
+
+          volume_mount {
+            name       = "milvus-storage"
+            mount_path = "/var/lib/milvus"
+          }
+        }
+
+        volume {
+          name = "milvus-storage"
+          persistent_volume_claim {
+            claim_name = "milvus-pvc"
+          }
+        }
+      }
+    }
+  }
+}
+
+# 2. Milvus Service (입구)
+resource "kubernetes_service" "milvus_standalone" {
+  metadata {
+    name      = "milvus-standalone"
+    namespace = "default"
+  }
+
+  spec {
+    selector = {
+      app = "milvus-standalone"
+    }
+
+    port {
+      name        = "milvus-port"
+      port        = 19530
+      target_port = 19530
+    }
+
+    port {
+      name        = "metrics-port"
+      port        = 9091
+      target_port = 9091
+    }
+
+    type = "ClusterIP"
+  }
+}
