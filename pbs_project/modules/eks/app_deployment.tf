@@ -33,7 +33,7 @@ resource "kubernetes_deployment" "pbs_app" {
           # [필수] 인수인계 문서에서 강조한 ADDR 환경 변수 ⭐
           env {
             name  = "MILVUS_ADDR"
-            value = "milvus-service:19530" # Milvus 서비스 주소
+            value = "milvus-standalone:19530" # Milvus 서비스 주소
           }
           env {
             name  = "OLLAMA_ADDR"
