@@ -16,3 +16,9 @@ variable "waf_acl_arn" {
   description = "WAF ARN passed from root module"
   type        = string
 }
+
+variable "rds_endpoint" {
+  description = "RDS 엔드포인트 주소"
+  type        = string
+  default     = ""
+}

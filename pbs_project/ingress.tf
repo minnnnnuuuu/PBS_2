@@ -16,6 +16,13 @@ resource "kubernetes_ingress_v1" "web_ingress" {
       # 주의: main.tf의 인증서 리소스 이름을 참조해야 합니다.
       #"alb.ingress.kubernetes.io/certificate-arn" = aws_acm_certificate.cert.arn
       "alb.ingress.kubernetes.io/certificate-arn" = module.route53_acm.acm_certificate_arn
+
+      # [추가 ⭐] 상태 검사 성공 코드 및 경로 설정
+      "alb.ingress.kubernetes.io/success-codes"   = "200,404,301" # 404가 나더라도 일단 트래픽은 보내라
+      "alb.ingress.kubernetes.io/healthcheck-path" = "/"
+
+      # [추가 ⭐] /api/xxx 요청을 백엔드에 전달할 때의 규칙 (필요시)
+      # "alb.ingress.kubernetes.io/rewrite-target" = "/"
     }
   }
 
@@ -41,7 +48,19 @@ resource "kubernetes_ingress_v1" "web_ingress" {
         # 2. 백엔드 접속 (API) -> "/api"
         # (주의: 여기 문법을 YAML(:)이 아니라 HCL(=)로 써야 에러가 안 납니다!)
         path {
-          path = "/api"
+          path = "/chat"
+          path_type = "Prefix"
+          backend {
+            service {
+              name = "hybrid-ai-service"
+              port {
+                number = 80
+              }
+            }
+          }
+        }
+        path {
+          path = "/documents"
           path_type = "Prefix"
           backend {
             service {
