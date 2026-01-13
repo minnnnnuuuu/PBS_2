@@ -189,7 +189,7 @@ async def chat(request: QueryRequest):
         print(f"Chat Error: {e}")
         return {"answer": f"에러가 발생했습니다: {str(e)}", "context": ""}
 
-@app.get("/api/documents")
+@app.get("/documents")
 def list_documents():
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET)
@@ -205,7 +205,7 @@ def list_documents():
         print(f"S3 List Error: {e}")
         return []
 
-@app.get("/api/download/{filename}")
+@app.get("/download/{filename}")
 def download_file(filename: str):
     try:
         file_obj = s3_client.get_object(Bucket=S3_BUCKET, Key=filename)
