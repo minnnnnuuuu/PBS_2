@@ -466,7 +466,7 @@ resource "aws_route53_record" "root" {
 }
 # [추가] ArgoCD 서브도메인 연결 (argocd.soldesk...)
 # =================================================================
-/*
+
 resource "aws_route53_record" "argocd" {
   # 1. 모듈에서 가져온 Zone ID (기존과 동일)
   zone_id = module.route53_acm.zone_id
@@ -486,7 +486,7 @@ resource "aws_route53_record" "argocd" {
     evaluate_target_health = true
   }
 }
-*/
+
 
 
 # =================================================================
