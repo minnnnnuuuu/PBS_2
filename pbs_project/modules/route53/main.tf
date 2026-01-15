@@ -11,7 +11,7 @@ variable "project_name" {
 resource "aws_route53_zone" "main" {
   name = var.domain_name
 }
-
+/*
 # 2. [추가] 도메인 등록처(AWS Domains)의 네임서버를 자동으로 업데이트!
 # 설명: Zone이 새로 만들어질 때마다 생기는 새로운 NS 4개를 실제 도메인 설정에 덮어씌웁니다.
 resource "aws_route53domains_registered_domain" "main" {
@@ -26,7 +26,7 @@ resource "aws_route53domains_registered_domain" "main" {
 
   # Zone이 먼저 만들어져야 함
   depends_on = [aws_route53_zone.main]
-}
+}*/
 
 # 3. [추가] 전파 대기 시간 (Time Sleep)
 # 설명: 네임서버를 바꿔도 전 세계에 퍼지는 데 시간이 걸립니다.
@@ -35,7 +35,8 @@ resource "time_sleep" "wait_for_dns_propagation" {
   create_duration = "60s" # 1분 대기 (만약 타임아웃 나면 120s로 늘리세요)
 
   # 네임서버 업데이트가 끝난 뒤에 카운트다운
-  depends_on = [aws_route53domains_registered_domain.main]
+  #depends_on = [aws_route53domains_registered_domain.main]
+  depends_on = [aws_route53_zone.main]
 }
 
 # 4. ACM 인증서 생성

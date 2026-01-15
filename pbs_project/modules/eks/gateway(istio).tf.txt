@@ -1,0 +1,54 @@
+# 1. 게이트웨이 설정을 담은 임시 YAML 파일 자동 생성
+resource "local_file" "gateway_manifest" {
+  filename = "${path.module}/pbs-gateway.yaml"
+  content  = <<EOT
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: amazon-lbc
+spec:
+  # [수정] 이 부분을 정확히 아래 이름으로 바꿔야 합니다!
+  #controllerName: ingress.k8s.aws/alb
+  controllerName: service.k8s.aws/gateway-controller
+  #controllerName: managed.aws.amazon.com/gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1 
+kind: Gateway
+metadata:
+  name: pbs-gateway
+  namespace: kube-system
+  annotations:
+    # [수정] AWS LBC가 가장 확실하게 인식하는 표준 어노테이션 형식입니다.
+    alb.k8s.aws/scheme: internet-facing
+    alb.k8s.aws/wafv2-acl-arn: ${var.waf_acl_arn}
+spec:
+  gatewayClassName: amazon-lbc
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+EOT
+}
+
+# 2. 접속 정보 갱신 + CRD 설치 + 게이트웨이 배포 (100% 자동화)
+resource "null_resource" "install_gateway_all" {
+  triggers = {
+    cluster_endpoint = aws_eks_cluster.this.endpoint
+    manifest_hash    = sha256(local_file.gateway_manifest.content)
+  }
+
+  provisioner "local-exec" { 
+    interpreter = ["PowerShell", "-Command"]
+    command     = <<EOT
+      aws eks update-kubeconfig --region ap-northeast-2 --name ${aws_eks_cluster.this.name} ;
+      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml ;
+      kubectl apply -f ${abspath(local_file.gateway_manifest.filename)}
+    EOT
+  }
+
+  # 클러스터와 파일이 준비된 후 실행
+  depends_on = [local_file.gateway_manifest, aws_eks_cluster.this]
+}

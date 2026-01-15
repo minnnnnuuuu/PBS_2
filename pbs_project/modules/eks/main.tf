@@ -411,6 +411,9 @@ resource "kubernetes_persistent_volume_claim" "milvus_pvc" {
       }
     }
   }
+  timeouts {
+    create = "20m" # 20분으로 늘림
+  }
 }
 
 resource "kubernetes_deployment" "milvus_standalone" {
@@ -483,6 +486,9 @@ resource "kubernetes_deployment" "milvus_standalone" {
         }
       }
     }
+  }
+  timeouts {
+    create = "20m" # 20분으로 늘림
   }
 }
 

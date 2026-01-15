@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-load-balancer-controller
+  namespace: kube-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: aws-load-balancer-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: aws-load-balancer-controller
+    spec:
+      serviceAccountName: aws-load-balancer-controller
+      containers:
+      - name: aws-load-balancer-controller
+        # 버전 v2.11.0의 특정 패치 버전을 사용하거나 최신으로 강제합니다.
+        image: public.ecr.aws/eks/aws-load-balancer-controller:v2.11.0
+        args:
+        - --cluster-name=pbs-project-dev-cluster
+        - --ingress-class=alb
+        - --aws-region=ap-northeast-2
+        - --aws-vpc-id=vpc-0deae1742e10e4fef
+        # v2.11.0에서 Gateway API를 활성화하는 가장 확실한 방법은 이 옵션 하나입니다.
+        - --feature-gates=GatewayAPI=true

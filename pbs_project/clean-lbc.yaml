@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-load-balancer-controller
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+      - name: aws-load-balancer-controller
+        args:
+        - --cluster-name=pbs-project-dev-cluster
+        - --ingress-class=alb
+        - --aws-region=ap-northeast-2
+        - --aws-vpc-id=vpc-0deae1742e10e4fef
+        - --enable-gateway-api
