@@ -3,10 +3,10 @@ apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
   name: pbs-gateway
-  namespace: istio-system  # 보통 istio-system에 둡니다
+  namespace: istio-system 
 spec:
   selector:
-    istio: ingress # [중요] 기본 Istio 인그레스 컨트롤러를 바라봄
+    istio: ingress 
   servers:
   - port:
       number: 80
@@ -27,21 +27,27 @@ spec:
   gateways:
   - istio-system/pbs-gateway
   http:
-  # 1. /api로 시작하는 요청은 백엔드(데이터)로 보낸다
+  # 1. /api로 시작하는 요청은 백엔드 앱(pbs-app)으로 보냄
+  # (주의: 서비스 이름은 hybrid-ai-service 입니다)
   - match:
     - uri:
         prefix: /api
+    rewrite:
+      uri: /
     route:
     - destination:
-        host: hybrid-ai-service
+        host: hybrid-ai-service 
         port:
           number: 80
-  # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보낸다
+  
+  # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보냄
+  # (주의: pbs-web-service는 나중에 만드실 예정이므로 지금은 에러 방지를 위해 주석 처리하거나, 
+  #  일단 hybrid-ai-service로 몰아주셔도 됩니다. 여기선 그대로 둡니다.)
   - match:
     - uri:
         prefix: /
     route:
     - destination:
-        host: pbs-web-service
+        host: pbs-web-service # <--- 이게 없어서 503 에러가 날 수 있지만, 배포는 성공합니다.
         port:
           number: 80
