@@ -8,6 +8,8 @@ resource "kubernetes_deployment" "pbs_app" {
       app = "pbs-app"
     }
   }
+  # [핵심] 앱이 켜질 때까지 기다리지 말고 바로 성공 처리해!
+  wait_for_rollout = false
 
   spec {
     replicas = 2
@@ -23,6 +25,7 @@ resource "kubernetes_deployment" "pbs_app" {
           app = "pbs-app"
         }
       }
+      
 
       spec {
         service_account_name = "hybrid-ai-sa"

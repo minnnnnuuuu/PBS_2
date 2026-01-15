@@ -548,7 +548,81 @@ resource "kubernetes_secret" "argocd_repo_secret" {
   # ArgoCD가 설치된 후에 생성되어야 함
   depends_on = [helm_release.argocd]
 }
+# [수정된 코드] ArgoCD 앱 등록을 위한 통합 리소스 (스크립트 방식)
+resource "null_resource" "argocd_applications" {
+  
+  # [핵심] EKS와 ArgoCD 설치, 그리고 Secret 생성이 끝날 때까지 무조건 기다림
+  depends_on = [
+    module.eks,
+    helm_release.argocd,
+    kubernetes_secret.argocd_repo_secret
+  ]
 
+  provisioner "local-exec" {
+    interpreter = ["PowerShell", "-Command"]
+    
+    command = <<-EOT
+      # 1. EKS 접속 정보(kubeconfig) 가져오기
+      aws eks update-kubeconfig --region ap-northeast-2 --name ${module.eks.cluster_name}
+      
+      # 2. ArgoCD Web Service 앱 등록
+      $web_app_yaml = @"
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pbs-web-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/minnnnnuuuu/PBS_2.git
+    path: manifests/eks/apps
+    targetRevision: HEAD
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+"@
+      echo $web_app_yaml | kubectl apply -f -
+
+      # 3. ArgoCD Infra(AX Platform) 앱 등록
+      $infra_app_yaml = @"
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pbs-ax-platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/minnnnnuuuu/PBS_2.git
+    path: manifests/eks/infra
+    targetRevision: HEAD
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - PruneLast=true
+"@
+      echo $infra_app_yaml | kubectl apply -f -
+    EOT
+  }
+}
+
+
+
+
+
+
+
+# 잠시 유배
+/*
 # 2) Application 1: PBS Web Service (구 y-docs-web)
 # -----------------------------------------------------------------
 resource "kubernetes_manifest" "app_web_service" {
@@ -617,3 +691,4 @@ resource "kubernetes_manifest" "app_ax_platform" {
 
   depends_on = [helm_release.argocd]
 }
+*/

@@ -374,8 +374,22 @@ resource "aws_eks_addon" "ebs_csi_driver" {
 
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-
+  
   depends_on = [aws_eks_node_group.this] # 노드가 생긴 뒤에 설치하는 게 안전합니다.
+}
+# [추가] PVC가 사용할 스토리지 클래스 정의
+resource "kubernetes_storage_class" "ebs_sc" {
+  metadata {
+    name = "ebs-sc"
+  }
+  storage_provisioner = "ebs.csi.aws.com"
+  volume_binding_mode = "WaitForFirstConsumer"
+  reclaim_policy      = "Delete"
+  parameters = {
+    type = "gp3" 
+  }
+  # 드라이버가 설치된 후에 만들어야 함
+  depends_on = [aws_eks_addon.ebs_csi_driver]
 }
 
 

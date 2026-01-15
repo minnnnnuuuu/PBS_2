@@ -1,43 +1,40 @@
+# 1. 메인 웹 서비스용 Ingress
 resource "kubernetes_ingress_v1" "web_ingress" {
   metadata {
     name      = "pbs-web-ingress"
-    namespace = "default" # 웹서버가 떠 있는 네임스페이스
+    namespace = "default"
     annotations = {
-      # [핵심] AWS 로드밸런서(ALB)를 만들어라
       "kubernetes.io/ingress.class"           = "alb"
       "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
       "alb.ingress.kubernetes.io/target-type" = "ip"
-      # [추가 1] HTTP로 들어오면 HTTPS로 리다이렉트
-      "alb.ingress.kubernetes.io/listen-ports" = jsonencode([
-        {"HTTP": 80},
-        {"HTTPS": 443}
-      ])
-      # [추가 2] main.tf에서 만든 인증서 붙이기 (이게 없으면 HTTPS 불가)
-      # 주의: main.tf의 인증서 리소스 이름을 참조해야 합니다.
-      #"alb.ingress.kubernetes.io/certificate-arn" = aws_acm_certificate.cert.arn
+      
+      # HTTP -> HTTPS 리다이렉트
+      "alb.ingress.kubernetes.io/listen-ports" = jsonencode([{"HTTP": 80}, {"HTTPS": 443}])
+      
+      # 인증서 연결
       "alb.ingress.kubernetes.io/certificate-arn" = module.route53_acm.acm_certificate_arn
 
-      # [추가 ⭐] 상태 검사 성공 코드 및 경로 설정
-      "alb.ingress.kubernetes.io/success-codes"   = "200,404,301" # 404가 나더라도 일단 트래픽은 보내라
+      # 상태 검사 설정
+      "alb.ingress.kubernetes.io/success-codes"   = "200,404,301"
       "alb.ingress.kubernetes.io/healthcheck-path" = "/"
-
-      # [추가 ⭐] /api/xxx 요청을 백엔드에 전달할 때의 규칙 (필요시)
-      # "alb.ingress.kubernetes.io/rewrite-target" = "/"
     }
   }
+
+  # [핵심] ALB 주소가 생성될 때까지 테라폼이 기다리도록 설정 (에러 방지)
+  wait_for_load_balancer = true 
 
   spec {
     rule {
       host = "soldesk-group4-pbs-project.click"
       
       http {
-        # 1. 메인 접속 (프론트엔드) -> "/"
+        # [수정됨] 백엔드 API 접속 ("/api"로 시작하는 모든 요청) - 채팅/업로드용
         path {
-          path = "/"
+          path = "/api"      
           path_type = "Prefix"
           backend {
             service {
-              name = "pbs-web-service"
+              name = "hybrid-ai-service" 
               port {
                 number = 80
               }
@@ -45,26 +42,13 @@ resource "kubernetes_ingress_v1" "web_ingress" {
           }
         }
 
-        # 2. 백엔드 접속 (API) -> "/api"
-        # (주의: 여기 문법을 YAML(:)이 아니라 HCL(=)로 써야 에러가 안 납니다!)
+        # 메인 웹사이트 접속
         path {
-          path = "/chat"
+          path = "/"
           path_type = "Prefix"
           backend {
             service {
-              name = "hybrid-ai-service"
-              port {
-                number = 80
-              }
-            }
-          }
-        }
-        path {
-          path = "/documents"
-          path_type = "Prefix"
-          backend {
-            service {
-              name = "hybrid-ai-service"
+              name = "pbs-web-service" 
               port {
                 number = 80
               }
@@ -74,32 +58,37 @@ resource "kubernetes_ingress_v1" "web_ingress" {
       }
     }
   }
+
+
+  # [추가 2] 컨트롤러가 설치된 후에 Ingress를 만들도록 강제 (module 이름 확인 필요)
+  # 만약 Load Balancer Controller가 'module.eks' 안에서 설치된다면 아래처럼 작성
+  depends_on = [
+    module.eks,
+    helm_release.aws_lbc
+  ]
 }
 
-# 1. ArgoCD용 Ingress (네임스페이스가 'argocd'인 점 주의!)
+# 2. ArgoCD용 Ingress
 resource "kubernetes_ingress_v1" "argocd_ingress" {
   metadata {
     name      = "argocd-ingress"
-    namespace = "argocd"  # ★중요: ArgoCD는 보통 이 방에 설치됩니다.
+    namespace = "argocd"
     annotations = {
       "kubernetes.io/ingress.class"           = "alb"
       "alb.ingress.kubernetes.io/scheme"      = "internet-facing"
       "alb.ingress.kubernetes.io/target-type" = "ip"
-      
-      # ArgoCD는 자체적으로 HTTPS를 써서, 백엔드 프로토콜을 HTTPS로 맞춰야 할 수도 있음
       "alb.ingress.kubernetes.io/backend-protocol" = "HTTPS"
-      
-      # 인증서 (모듈에서 가져온 것 공용 사용)
       "alb.ingress.kubernetes.io/certificate-arn" = module.route53_acm.acm_certificate_arn
-      
-      # HTTP -> HTTPS 리다이렉트
       "alb.ingress.kubernetes.io/listen-ports" = jsonencode([{"HTTP": 80}, {"HTTPS": 443}])
     }
   }
 
+  # [핵심] ALB 주소가 생성될 때까지 기다림
+  wait_for_load_balancer = true
+
   spec {
     rule {
-      host = "argocd.soldesk-group4-pbs-project.click" # 서브도메인
+      host = "argocd.soldesk-group4-pbs-project.click"
       
       http {
         path {
@@ -107,9 +96,9 @@ resource "kubernetes_ingress_v1" "argocd_ingress" {
           path_type = "Prefix"
           backend {
             service {
-              name = "argocd-server" # 실제 ArgoCD 서비스 이름
+              name = "argocd-server"
               port {
-                number = 443 # ArgoCD 서비스 포트
+                number = 443
               }
             }
           }
@@ -117,4 +106,11 @@ resource "kubernetes_ingress_v1" "argocd_ingress" {
       }
     }
   }
+
+  # 순서 보장 (네임스페이스 생성 후 Ingress 생성)
+  depends_on = [
+    helm_release.argocd,
+    module.route53_acm,
+    helm_release.aws_lbc
+  ]
 }

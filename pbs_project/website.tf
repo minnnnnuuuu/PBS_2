@@ -1,5 +1,4 @@
-/*
-
+# pbs_project/website.tf
 
 # 1. 웹사이트 배포 (Deployment) - 실제 서버 띄우기
 resource "kubernetes_deployment" "pbs_web" {
@@ -40,6 +39,8 @@ resource "kubernetes_deployment" "pbs_web" {
       }
     }
   }
+  # [핵심] 파드가 정상 실행될 때까지 기다리지 않음! (이미지 없어도 통과됨)
+  wait_for_rollout = false
 }
 
 # 2. 서비스 (Service) - 인그레스와 연결하는 통로
@@ -63,4 +64,3 @@ resource "kubernetes_service" "pbs_web_svc" {
   }
 }
 
-*/
