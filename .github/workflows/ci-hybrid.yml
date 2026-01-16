@@ -21,14 +21,14 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-2
 
-    - name: 3. ECR 로그인
+    - name: 3. AWS ECR 로그인
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
     - name: 4. AI 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        # [수정] 이미 성공한 창고인 pbs-project-repo로 확실히 고정 ⭐
+        # 테라폼의 ai_engine_repo 이름과 일치시켰습니다. ⭐
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: ai-latest
       run: |
