@@ -15,7 +15,28 @@ spec:
     hosts:
     - "*"
 ---
-# [2] VirtualService
+# [2] ServiceEntry (온프레미스 AI 도메인 등록)
+# [수정] 위 Gateway와 구분하기 위해 --- 를 추가했네.
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: on-premise-ai-api
+  namespace: default
+spec:
+  # Cloudflare에서 설정한 도메인과 정확히 일치함
+  hosts:
+  - api.cloudreaminu.cloud
+  location: MESH_EXTERNAL
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: DNS
+---
+# [3] VirtualService
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
@@ -27,8 +48,7 @@ spec:
   gateways:
   - istio-system/pbs-gateway
   http:
-  # 1. /api로 시작하는 요청은 백엔드 앱(pbs-app)으로 보냄
-  # (주의: 서비스 이름은 hybrid-ai-service 입니다)
+  # 1. /api 요청을 온프레미스 AI(Cloudflare Tunnel)로 라우팅
   - match:
     - uri:
         prefix: /api
@@ -36,18 +56,18 @@ spec:
       uri: /
     route:
     - destination:
-        host: hybrid-ai-service 
+        host: api.cloudreaminu.cloud 
         port:
           number: 80
-  
-  # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보냄
-  # (주의: pbs-web-service는 나중에 만드실 예정이므로 지금은 에러 방지를 위해 주석 처리하거나, 
-  #  일단 hybrid-ai-service로 몰아주셔도 됩니다. 여기선 그대로 둡니다.)
+    timeout: 180s # Solar 모델의 분석 시간을 고려한 넉넉한 설정
+
+  # 2. 나머지 모든(/) 요청은 웹사이트로 보냄
   - match:
     - uri:
         prefix: /
     route:
     - destination:
-        host: pbs-web-service # <--- 이게 없어서 503 에러가 날 수 있지만, 배포는 성공합니다.
+        host: pbs-web-service
         port:
           number: 80
+    timeout: 180s

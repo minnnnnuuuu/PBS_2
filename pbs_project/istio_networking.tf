@@ -98,7 +98,7 @@ resource "null_resource" "apply_istio_resources" {
       kubectl apply -f ${local_file.istio_manifest.filename}
 
       # 3. 앱 재시작 (새로운 Istio 설정 반영)
-      kubectl rollout restart deployment pbs-app-deployment || true
+      kubectl rollout restart deployment pbs-app-deployment
     EOT
     
     interpreter = ["PowerShell", "-Command"]
