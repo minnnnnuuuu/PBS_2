@@ -50,10 +50,13 @@ spec:
         host: hybrid-ai-service 
         port:
           number: 80
-  
+    timeout: 180s  # [추가] AI 응답 대기 시간 설정
+
   # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보냄
   # (주의: pbs-web-service는 나중에 만드실 예정이므로 지금은 에러 방지를 위해 주석 처리하거나, 
   #  일단 hybrid-ai-service로 몰아주셔도 됩니다. 여기선 그대로 둡니다.)
+    
+  # 2. 나머지 모든(/) 요청은 웹사이트(화면)로 보낸다
   - match:
     - uri:
         prefix: /
@@ -62,6 +65,7 @@ spec:
         host: pbs-web-service # <--- 이게 없어서 503 에러가 날 수 있지만, 배포는 성공합니다.
         port:
           number: 80
+    timeout: 180s  # [추가] AI 응답 대기 시간 설정
 YAML
 }
 
