@@ -10,40 +10,33 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: 1. 코드 가져오기
       uses: actions/checkout@v4
 
-    - name: 2. AWS 신분증 확인
+    - name: 2. AWS 인증
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-2
 
-    - name: 3. AWS ECR 로그인
+    - name: 3. ECR 로그인
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: 4. 하이브리드 이미지 빌드 및 전송 (Push)
+    - name: 4. AI 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        # [통일] 이미 성공한 창고 이름으로 바꿉니다 ⭐
+        # [수정] 이미 성공한 창고인 pbs-project-repo로 확실히 고정 ⭐
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: ai-latest
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "✅ AI 엔진 이미지(ai-latest) 전송 완료!"
+        echo "✅ pbs-project-repo 창고에 ai-latest 입고 완료!"
 
-    - name: 5. kubectl 설치
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-
-    - name: 6. EKS 배포 갱신 (Rollout Restart)
+    - name: 5. EKS 배포 갱신
       run: |
         aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
-        kubectl rollout restart deployment pbs-app-deployment
-        echo "🚀 EKS 배포 갱신 완료!"
+        kubectl rollout restart deployment hybrid-ai-service
