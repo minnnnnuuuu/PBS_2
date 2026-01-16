@@ -36,11 +36,11 @@ resource "kubernetes_deployment" "pbs_app" {
           # [필수] 인수인계 문서에서 강조한 ADDR 환경 변수 ⭐
           env {
             name  = "MILVUS_ADDR"
-            value = "milvus-standalone.default.svc.cluster.local:19530" # Milvus 서비스 주소
+            value = "192.168.10.70:19530" # Milvus 서비스 주소
           }
           env {
             name  = "OLLAMA_ADDR"
-            value = "http://ollama-deployment:11434" # Ollama 서비스 주소
+            value = "http://api.cloudreaminu.cloud" # Ollama 서비스 주소
           }
           env {
             name  = "DATABASE_ADDR"
@@ -48,11 +48,11 @@ resource "kubernetes_deployment" "pbs_app" {
           }
           env {
             name  = "AI_SERVER_URL"
-            value = "http://api.cloudreaminu.cloud" # [핵심 변경]
+            value = "http://api.cloudreaminu.cloud" [cite: 44] # [핵심 변경]
           }
           env {
             name  = "EMBEDDING_SERVER_URL"
-            value = "http://api.cloudreaminu.cloud" # [핵심 변경]
+            value = "http://api.cloudreaminu.cloud" [cite: 45] # [핵심 변경]
           }
 
           # [최적화] t3.large 자원 부족(Insufficient cpu) 해결 ⭐
