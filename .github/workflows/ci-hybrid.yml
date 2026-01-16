@@ -29,14 +29,14 @@ jobs:
     - name: 4. 하이브리드 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: hybrid-service
+        # [통일] 이미 성공한 창고 이름으로 바꿉니다 ⭐
+        ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: ai-latest
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "✅ AI 엔진 이미지(ai-latest) 전송 완료!"
 
-    # [중요] kubectl 명령어를 쓰기 위해 설치하는 단계 추가
     - name: 5. kubectl 설치
       uses: azure/setup-kubectl@v3
       with:
@@ -44,9 +44,6 @@ jobs:
 
     - name: 6. EKS 배포 갱신 (Rollout Restart)
       run: |
-        # [수정됨] 실제 클러스터 이름인 'pbs-project-dev-cluster'로 변경
         aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
-        
-        # 새로운 이미지를 가져오도록 배포(Deployment) 재시작
-        kubectl rollout restart deployment hybrid-ai-service
-        echo "🚀 EKS 배포 갱신 완료! 이제 새 코드가 적용됩니다."
+        kubectl rollout restart deployment pbs-app-deployment
+        echo "🚀 EKS 배포 갱신 완료!"
