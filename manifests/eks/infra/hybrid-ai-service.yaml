@@ -5,6 +5,7 @@ metadata:
   name: hybrid-ai-sa
   namespace: default
   annotations:
+    # EKS에서 S3 및 ECR 권한을 부여하기 위한 IAM Role 연결
     eks.amazonaws.com/role-arn: arn:aws:iam::198011705652:role/hybrid-ai-sa-role
 ---
 # 2. AI 엔진 실행 설정 (Deployment)
@@ -28,16 +29,16 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
         - name: ai-app
-          # [CI와 일치] pbs-project-repo 창고의 ai-latest 사용 ⭐
+          # [CI 일치] 성공적으로 빌드된 pbs-project-repo 창고의 ai-latest 사용
           image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
           env:
-            # [수정] main.py의 변수명 OLLAMA_URL과 온프레미스 주소 연결 ⭐
+            # [수정] Ollama API 표준 경로에 맞춰 /ai를 제거한 온프레미스 주소 연결 ⭐
             - name: OLLAMA_URL
-              value: "http://api.cloudreaminu.cloud/ai"
-            # [수정] main.py의 변수명 MILVUS_HOST와 연결 ⭐
+              value: "http://api.cloudreaminu.cloud"
+            # [수정] main.py 소스 코드의 변수명(MILVUS_HOST)과 일치
             - name: MILVUS_HOST
               value: "milvus-standalone"
             - name: S3_BUCKET_NAME
@@ -57,7 +58,7 @@ metadata:
   name: hybrid-ai-service
   namespace: default
 spec:
-  type: LoadBalancer
+  type: LoadBalancer # 외부에서 AI 엔진 상태를 바로 확인할 수 있도록 설정
   selector:
     app: hybrid-ai
   ports:
