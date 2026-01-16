@@ -27,19 +27,17 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
       - name: backend-container
-        # [수정 필요] 아래 주소를 님의 ECR 주소로 바꾸세요!
-        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest
+        # [수정] 테라폼 및 CI 설정과 일치시켰습니다 ⭐
+        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
-        # [여기! 아래 내용을 추가해 주세요] ===========================
         env:
         - name: S3_BUCKET_NAME
-          value: "pbs-project-ai-data-dev-v1"  # 님께서 생성한 실제 S3 버킷 이름
-        
+          value: "pbs-project-ai-data-dev-v1"
         - name: MILVUS_HOST
-          value: "milvus-standalone"      # 아까 파드 이름이 milvus-standalone 이었으므로 수정!
-          
+          # [수정] main.py의 변수명과 일치 ⭐
+          value: "milvus-standalone"
         - name: OLLAMA_URL
-          value: "http://ollama-service:11434" # (선택) Ollama 서비스 이름이 다르다면 수정
-        # ========================================================
+          # [수정] 온프레미스 터널 주소로 연결 (하이브리드 핵심) ⭐
+          value: "http://api.cloudreaminu.cloud/ai"

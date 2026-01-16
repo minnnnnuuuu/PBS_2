@@ -3,18 +3,20 @@ name: Hybrid Service Build and Push (AI Engine)
 on:
   push:
     branches: [ "main" ]
+    # AI 엔진 소스나 인프라 설정이 바뀔 때 모두 작동하도록 경로를 확장했습니다.
     paths:
       - 'manifests/ai-engine/**'
-      - 'manifests/on-prem/**'
+      - 'manifests/eks/infra/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
     - name: 1. 코드 가져오기
       uses: actions/checkout@v4
 
-    - name: 2. AWS 인증
+    - name: 2. AWS 신분증 확인
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -25,18 +27,21 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: 4. AI 이미지 빌드 및 전송 (Push)
+    - name: 4. AI 엔진 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        # 테라폼의 ai_engine_repo 이름과 일치시켰습니다. ⭐
+        # [테라폼 일치] ai_engine_repo 이름인 pbs-project-repo 사용 ⭐
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: ai-latest
       run: |
+        # manifests/ai-engine 폴더의 Dockerfile을 사용하여 빌드
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "✅ pbs-project-repo 창고에 ai-latest 입고 완료!"
 
-    - name: 5. EKS 배포 갱신
+    - name: 5. EKS 배포 갱신 (Rollout Restart)
       run: |
         aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
+        # 새로운 이미지를 즉시 반영하도록 명령
         kubectl rollout restart deployment hybrid-ai-service
+        echo "🚀 EKS 하이브리드 서비스 갱신 완료!"

@@ -1,10 +1,22 @@
+# 1. AI 엔진용 신분증 (ServiceAccount)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hybrid-ai-sa
+  namespace: default
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::198011705652:role/hybrid-ai-sa-role
+---
+# 2. AI 엔진 실행 설정 (Deployment)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hybrid-ai-service
   namespace: default
+  labels:
+    app: hybrid-ai
 spec:
-  replicas: 1
+  replicas: 1 # t3.large 자원 보호를 위해 1개 유지
   selector:
     matchLabels:
       app: hybrid-ai
@@ -16,16 +28,20 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
         - name: ai-app
-          # CI에서 푸시한 주소와 100% 일치합니다. ⭐
+          # [CI와 일치] pbs-project-repo 창고의 ai-latest 사용 ⭐
           image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
           env:
-            - name: OLLAMA_ADDR
+            # [수정] main.py의 변수명 OLLAMA_URL과 온프레미스 주소 연결 ⭐
+            - name: OLLAMA_URL
               value: "http://api.cloudreaminu.cloud/ai"
-            - name: MILVUS_ADDR
-              value: "milvus-standalone.default.svc.cluster.local:19530"
+            # [수정] main.py의 변수명 MILVUS_HOST와 연결 ⭐
+            - name: MILVUS_HOST
+              value: "milvus-standalone"
+            - name: S3_BUCKET_NAME
+              value: "pbs-project-ai-data-dev-v1"
           resources:
             requests:
               cpu: "100m"
@@ -34,6 +50,7 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 ---
+# 3. 서비스 연결 통로 (Service)
 apiVersion: v1
 kind: Service
 metadata:
