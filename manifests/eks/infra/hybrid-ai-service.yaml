@@ -1,4 +1,4 @@
-# 1. ServiceAccount
+# 1. ServiceAccount (유지)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -15,8 +15,6 @@ metadata:
   namespace: default
   labels:
     app: hybrid-ai
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
 spec:
   replicas: 2
   selector:
@@ -30,7 +28,8 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
         - name: ai-app
-          image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest
+          # [수정] 창고 이름을 pbs-project-repo로 통일 ⭐
+          image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -43,23 +42,19 @@ spec:
               memory: "512Mi"
           env:
             - name: OLLAMA_URL
-              # [수정됨] AWS EKS 내부의 ollama-service로 직접 연결
-              value: "http://ollama-service:11434"
+              # [수정] 온프레미스 AI 서버 주소로 변경 (하이브리드 핵심) ⭐
+              value: "http://api.cloudreaminu.cloud/ai"
             - name: MILVUS_HOST
               value: "milvus-standalone"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
 ---
-# 3. Service
+# 3. Service (유지)
 apiVersion: v1
 kind: Service
 metadata:
   name: hybrid-ai-service
   namespace: default
-  labels:
-    argocd.argoproj.io/instance: pbs-ax-platform
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
 spec:
   type: LoadBalancer
   selector:
