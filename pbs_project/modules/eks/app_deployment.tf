@@ -46,6 +46,14 @@ resource "kubernetes_deployment" "pbs_app" {
             name  = "DATABASE_ADDR"
             value = "pbs-project-cluster.cluster-c7immc08qoyj.ap-northeast-2.rds.amazonaws.com"
           }
+          env {
+            name  = "AI_SERVER_URL"
+            value = "http://api.cloudreaminu.cloud" # [핵심 변경]
+          }
+          env {
+            name  = "EMBEDDING_SERVER_URL"
+            value = "http://api.cloudreaminu.cloud" # [핵심 변경]
+          }
 
           # [최적화] t3.large 자원 부족(Insufficient cpu) 해결 ⭐
           resources {
