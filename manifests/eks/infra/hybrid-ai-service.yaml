@@ -22,9 +22,9 @@ spec:
     metadata:
       labels:
         app: hybrid-ai
-      # [추가] Istio 관련 네트워크 최적화 설정 ⭐
+      # [최적화] 도메인 기반 통신을 위해 기존 IP 예외 설정은 주석 처리합니다. ⭐
       annotations:
-        traffic.sidecar.istio.io/excludeOutboundIPRanges: "192.168.10.70/32"
+        # traffic.sidecar.istio.io/excludeOutboundIPRanges: "192.168.10.70/32"
         proxy.istio.io/config: '{ "holdApplicationUntilProxyReceivesConfig": true }'
     spec:
       serviceAccountName: hybrid-ai-sa
@@ -36,9 +36,10 @@ spec:
             - containerPort: 80
           env:
             - name: OLLAMA_URL
-              value: "http://api.cloudreaminu.cloud"
+              value: "https://api.cloudreaminu.cloud"
             - name: MILVUS_HOST
-              value: "192.168.10.70"
+              # [수정] 온프레미스 IP 대신 Cloudflare 터널 주소를 사용합니다.
+              value: "milvus.cloudreaminu.cloud"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
           readinessProbe:
@@ -61,6 +62,7 @@ metadata:
   name: hybrid-ai-service
   namespace: default
 spec:
+  # 외부 노출이 필요한 경우 LoadBalancer를 유지하되, 내부 통신 위주라면 ClusterIP도 가능합니다.
   type: LoadBalancer
   selector:
     app: hybrid-ai
