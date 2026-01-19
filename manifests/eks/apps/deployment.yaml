@@ -1,4 +1,6 @@
-# 1. AI 중계 서비스 (Backend)
+# ---------------------------------------------------------
+# 1. AI 중계 서비스 (Backend: hybrid-ai-service)
+# ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +17,9 @@ spec:
     metadata:
       labels:
         app: hybrid-ai
+      annotations:
+        # Istio 사이드카가 구동될 때까지 앱 시작을 대기하여 네트워크 에러 방지
+        proxy.istio.io/config: '{ "holdApplicationUntilProxyReceivesConfig": true }'
     spec:
       serviceAccountName: hybrid-ai-sa
       containers:
@@ -58,8 +63,11 @@ spec:
       port: 80
       targetPort: 80
   type: ClusterIP
+
 ---
-# 2. 웹 서비스 (Frontend)
+# ---------------------------------------------------------
+# 2. 웹 서비스 (Frontend: pbs-web)
+# ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -76,10 +84,12 @@ spec:
     metadata:
       labels:
         app: pbs-web
+      annotations:
+        sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: web-container
-        # [중요] web-latest 태그를 사용해야 ImagePull 에러가 안 납니다.
+        # [중요] ECR 태그를 web-latest로 지정하여 ImagePullBackOff 해결
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
