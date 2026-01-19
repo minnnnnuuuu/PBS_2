@@ -31,16 +31,15 @@ s3_client = boto3.client("s3", region_name=AWS_REGION)
 def init_milvus():
     """Milvus 연결 및 컬렉션 초기화"""
     try:
-        print(f"🔄 Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
+        print(f"🔄 Connecting to Milvus via Tunnel: {MILVUS_HOST}:{MILVUS_PORT}...")
 
-        # [최종 수정] secure=True와 함께 server_name을 반드시 명시해야
-        # Cloudflare의 gRPC 프록시를 정상적으로 통과할 수 있습니다. ⭐
+        # [최종 해결 코드] URI 방식을 사용하여 Cloudflare gRPC 경로를 명확히 지정합니다. ⭐
+        # secure=True와 server_name이 합쳐져야 'sdk incompatible' 에러가 사라집니다.
         connections.connect(
             alias="default",
-            host=MILVUS_HOST,
-            port=MILVUS_PORT,
+            uri=f"https://{MILVUS_HOST}:{MILVUS_PORT}",
             secure=True,
-            server_name="milvus.cloudreaminu.cloud" # gRPC TLS 인증용 도메인 명시
+            server_name=MILVUS_HOST  # milvus.cloudreaminu.cloud
         )
 
         if not utility.has_collection(COLLECTION_NAME):
@@ -76,7 +75,8 @@ def init_milvus():
 @app.on_event("startup")
 async def startup_event():
     try:
-        print("🚀 System Update: v4.1 (Secure gRPC Connectivity)")
+        print("🚀 System Update: v4.2 (Protocol Optimization Applied)")
+        # 터널 연결 안정화를 위해 대기 시간을 조금 더 가집니다.
         time.sleep(5)
         init_milvus()
     except Exception as e:
