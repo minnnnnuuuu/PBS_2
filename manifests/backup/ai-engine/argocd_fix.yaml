@@ -1,0 +1,22 @@
+﻿apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pbs-ax-platform
+  namespace: argocd
+spec:
+  ignoreDifferences:
+  - group: storage.k8s.io
+    kind: StorageClass
+    name: ebs-sc
+    jsonPointers:
+    - /reclaimPolicy
+  - group: apps
+    kind: Deployment
+    name: hybrid-ai-service
+    jsonPointers:
+    - /spec/template/spec/containers/0/env
+  - group: apps
+    kind: Deployment
+    name: pbs-app-deployment
+    jsonPointers:
+    - /spec/template/spec/containers/0/env

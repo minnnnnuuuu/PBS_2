@@ -1,14 +1,11 @@
-# 1. AI 엔진용 신분증 (ServiceAccount)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: hybrid-ai-sa
   namespace: default
   annotations:
-    # EKS에서 S3 및 ECR 권한을 부여하기 위한 IAM Role 연결
     eks.amazonaws.com/role-arn: arn:aws:iam::198011705652:role/hybrid-ai-sa-role
 ---
-# 2. AI 엔진 실행 설정 (Deployment)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +14,7 @@ metadata:
   labels:
     app: hybrid-ai
 spec:
-  replicas: 1 # t3.large 자원 보호를 위해 1개 유지
+  replicas: 1
   selector:
     matchLabels:
       app: hybrid-ai
@@ -29,20 +26,25 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
         - name: ai-app
-          # [CI 일치] 성공적으로 빌드된 pbs-project-repo 창고의 ai-latest 사용
           image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
           env:
-            # [수정] Ollama API 표준 경로에 맞춰 /ai를 제거한 온프레미스 주소 연결 ⭐
             - name: OLLAMA_URL
               value: "http://api.cloudreaminu.cloud"
-            # [수정] main.py 소스 코드의 변수명(MILVUS_HOST)과 일치
             - name: MILVUS_HOST
-              value: "milvus-standalone"
+              # 온프레미스 Milvus 서버 주소
+              value: "192.168.10.70"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
+          # [핵심 수정] 경로를 /health에서 /로 변경하여 404 에러 해결
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
           resources:
             requests:
               cpu: "100m"
@@ -51,14 +53,13 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 ---
-# 3. 서비스 연결 통로 (Service)
 apiVersion: v1
 kind: Service
 metadata:
   name: hybrid-ai-service
   namespace: default
 spec:
-  type: LoadBalancer # 외부에서 AI 엔진 상태를 바로 확인할 수 있도록 설정
+  type: LoadBalancer
   selector:
     app: hybrid-ai
   ports:

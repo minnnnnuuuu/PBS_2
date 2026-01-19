@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pbs-ax-platform
+  namespace: argocd
+spec:
+  destination:
+    namespace: default
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: manifests/eks/infra
+    repoURL: https://github.com/minnnnnuuuu/PBS_2.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated: null
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+    - PruneLast=true
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    name: hybrid-ai-service
+    jsonPointers:
+    - /spec/template/spec/containers/0/env
+  - group: apps
+    kind: Deployment
+    name: pbs-app-deployment
+    jsonPointers:
+    - /spec/template/spec/containers/0/env
