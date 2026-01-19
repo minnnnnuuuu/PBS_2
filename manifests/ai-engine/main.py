@@ -25,13 +25,14 @@ COLLECTION_NAME = "pbs_docs"
 
 s3_client = boto3.client("s3", region_name=AWS_REGION)
 
-
 def init_milvus():
+    """Milvus 연결 및 컬렉션 초기화"""
     try:
+        # Cloudflare Tunnel 환경에서는 https:// URI 형식이 가장 확실합니다.
         milvus_uri = f"https://{MILVUS_HOST}:{MILVUS_PORT}"
-        print(f"🔄 Connecting to Milvus: {milvus_uri}...")
+        print(f"🔄 Connecting to Milvus via Secure Tunnel: {milvus_uri}...")
 
-        # Cloudflare SNI 패치를 포함한 최종 연결 설정
+        # [최종 패치] Cloudflare의 엄격한 gRPC 정책 통과를 위한 설정 ⭐
         connections.connect(
             alias="default",
             uri=milvus_uri,
@@ -54,6 +55,8 @@ def init_milvus():
             index_params = {"metric_type": "COSINE", "index_type": "IVF_FLAT", "params": {"nlist": 128}}
             collection.create_index(field_name="embedding", index_params=index_params)
             print("✅ Index created.")
+        else:
+            print(f"ℹ️ Collection '{COLLECTION_NAME}' already exists.")
 
         Collection(COLLECTION_NAME).load()
         print("✅ Milvus Connected & Collection Loaded!")
@@ -61,20 +64,17 @@ def init_milvus():
     except Exception as e:
         print(f"⚠️ Milvus Connection Failed! Error: {str(e)}")
 
-
 @app.on_event("startup")
 async def startup_event():
     try:
-        print("🚀 System Update: v4.5 (ArgoCD Sync Mandatory)")
+        print("🚀 System Update: v4.6 (Final Infra & Code Sync)")
         time.sleep(10)
         init_milvus()
     except Exception as e:
         print(f"Startup Warning: {e}")
 
-
 class QueryRequest(BaseModel):
     query: str
-
 
 async def get_embedding(text: str):
     async with httpx.AsyncClient() as client:
@@ -84,11 +84,9 @@ async def get_embedding(text: str):
                 json={"model": EMBEDDING_MODEL, "prompt": text},
                 timeout=60.0
             )
-            return resp.json().get("embedding", [])
+            return resp.json().get("embedding", []) if resp.status_code == 200 else []
         except Exception as e:
-            print(f"Embedding Error: {e}");
-            return []
-
+            print(f"Embedding Error: {e}"); return []
 
 async def get_summary(text: str):
     prompt = f"아래 문서를 한 문장(50자 이내)으로 요약해줘:\n\n{text[:2000]}"
@@ -96,19 +94,15 @@ async def get_summary(text: str):
         try:
             resp = await client.post(f"{OLLAMA_URL}/api/generate",
                                      json={"model": LLM_MODEL, "prompt": prompt, "stream": False})
-            return resp.json().get("response", "요약본 없음")
+            return resp.json().get("response", "요약본 없음") if resp.status_code == 200 else "실패"
         except Exception as e:
-            print(f"Summary Error: {e}");
-            return "요약 생성 실패"
-
+            print(f"Summary Error: {e}"); return "에러"
 
 @app.get("/health")
 def health_check(): return {"status": "ok"}
 
-
 @app.get("/")
 def root(): return {"status": "ok", "message": "PBS AI Backend Running"}
-
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -118,7 +112,7 @@ async def upload_file(file: UploadFile = File(...)):
             text_content = content.decode("utf-8")
         except UnicodeDecodeError:
             s3_client.put_object(Bucket=S3_BUCKET, Key=file.filename, Body=content)
-            return {"message": "Success (Binary File)", "filename": file.filename, "summary": "분석 불가"}
+            return {"message": "Binary Success", "filename": file.filename, "summary": "분석 불가"}
 
         s3_client.put_object(Bucket=S3_BUCKET, Key=file.filename, Body=content)
         summary = await get_summary(text_content)
@@ -126,21 +120,18 @@ async def upload_file(file: UploadFile = File(...)):
 
         if vector and connections.has_connection("default"):
             collection = Collection(COLLECTION_NAME)
-            data = [[vector], [text_content], [file.filename], [summary]]
-            collection.insert(data)
+            collection.insert([[vector], [text_content], [file.filename], [summary]])
             collection.flush()
-            print(f"✅ Document '{file.filename}' indexed.")
+            print(f"✅ indexed: {file.filename}")
 
         return {"message": "Success", "filename": file.filename, "summary": summary}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat")
 async def chat(request: QueryRequest):
     try:
         query_vector = await get_embedding(request.query)
-        if not query_vector: return {"answer": "AI 엔진 연결 실패"}
+        if not query_vector: return {"answer": "엔진 연결 실패"}
         if not connections.has_connection("default"): init_milvus()
 
         collection = Collection(COLLECTION_NAME)
@@ -151,37 +142,26 @@ async def chat(request: QueryRequest):
             limit=3, output_fields=["text"]
         )
 
-        context_texts = [hit.entity.get("text") for hits in results for hit in hits] if results else []
-        context = "\n\n".join(context_texts)
-        if not context: return {"answer": "관련된 문서를 찾을 수 없습니다."}
+        context = "\n\n".join([hit.entity.get("text") for hits in results for hit in hits]) if results else ""
+        if not context: return {"answer": "관련 문서 없음"}
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(f"{OLLAMA_URL}/api/generate",
-                                     json={
-                                         "model": LLM_MODEL,
-                                         "prompt": f"문서를 바탕으로 답변해줘.\n\n[문서]:\n{context}\n\n[질문]: {request.query}",
-                                         "stream": False
-                                     })
-            return {"answer": resp.json().get("response", "생성 실패"), "context": context}
-    except Exception as e:
-        return {"answer": f"에러: {str(e)}"}
-
+                                     json={"model": LLM_MODEL, "prompt": f"문서 바탕 답변: {context}\n질문: {request.query}", "stream": False})
+            return {"answer": resp.json().get("response", "오류"), "context": context}
+    except Exception as e: return {"answer": f"에러: {str(e)}"}
 
 @app.get("/api/documents")
 def list_documents():
     try:
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET)
-        return [{"id": i, "title": obj['Key'], "filename": obj['Key'], "date": obj['LastModified'].strftime("%Y-%m-%d"),
-                 "summary": "완료"}
+        return [{"id": i, "title": obj['Key'], "filename": obj['Key'], "date": obj['LastModified'].strftime("%Y-%m-%d"), "summary": "완료"}
                 for i, obj in enumerate(response.get('Contents', []))]
-    except Exception as e:
-        return []
-
+    except Exception as e: return []
 
 @app.get("/api/download/{filename}")
 def download_file(filename: str):
     try:
         file_obj = s3_client.get_object(Bucket=S3_BUCKET, Key=filename)
         return Response(content=file_obj['Body'].read(), media_type="application/octet-stream")
-    except Exception as e:
-        raise HTTPException(status_code=404)
+    except Exception as e: raise HTTPException(status_code=404)
