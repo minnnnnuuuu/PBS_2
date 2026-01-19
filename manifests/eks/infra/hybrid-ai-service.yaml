@@ -22,6 +22,10 @@ spec:
     metadata:
       labels:
         app: hybrid-ai
+      # [추가] Istio 관련 네트워크 최적화 설정 ⭐
+      annotations:
+        traffic.sidecar.istio.io/excludeOutboundIPRanges: "192.168.10.70/32"
+        proxy.istio.io/config: '{ "holdApplicationUntilProxyReceivesConfig": true }'
     spec:
       serviceAccountName: hybrid-ai-sa
       containers:
@@ -34,11 +38,9 @@ spec:
             - name: OLLAMA_URL
               value: "http://api.cloudreaminu.cloud"
             - name: MILVUS_HOST
-              # 온프레미스 Milvus 서버 주소
               value: "192.168.10.70"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
-          # [핵심 수정] 경로를 /health에서 /로 변경하여 404 에러 해결
           readinessProbe:
             httpGet:
               path: /
