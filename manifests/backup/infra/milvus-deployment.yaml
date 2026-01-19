@@ -56,7 +56,7 @@ spec:
           - name: K8S_NAMESPACE
             value: "default"
 
-        # 자원 설정 수정: t3.large 노드에서 즉시 배치 가능하도록 최적화 ⭐
+        # 자원 설정 수정: t3.large 노드에서 즉시 배치 가능하도록 최적화
         resources:
           requests:
             cpu: "200m"      # 최소 0.2개 확보 (시동 보장)
