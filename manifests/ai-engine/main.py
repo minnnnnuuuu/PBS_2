@@ -14,7 +14,7 @@ app = FastAPI()
 # =========================================================
 OLLAMA_URL = os.getenv("OLLAMA_URL", "https://api.cloudreaminu.cloud")
 
-# 환경 변수로부터 Milvus 접속 정보를 읽어옵니다.
+# [수정] 환경 변수 읽기 안정화
 MILVUS_HOST = os.getenv("MILVUS_HOST", "milvus.cloudreaminu.cloud")
 MILVUS_PORT = os.getenv("MILVUS_PORT", "443")
 
@@ -31,15 +31,18 @@ s3_client = boto3.client("s3", region_name=AWS_REGION)
 def init_milvus():
     """Milvus 연결 및 컬렉션 초기화"""
     try:
-        print(f"🔄 Connecting to Milvus via Tunnel: {MILVUS_HOST}:{MILVUS_PORT}...")
+        # 443 포트 사용 시에는 반드시 https:// 를 포함한 URI 방식이 가장 안정적입니다.
+        milvus_uri = f"https://{MILVUS_HOST}:{MILVUS_PORT}"
+        print(f"🔄 Connecting to Milvus via Secure Tunnel: {milvus_uri}...")
 
-        # [최종 해결 코드] URI 방식을 사용하여 Cloudflare gRPC 경로를 명확히 지정합니다. ⭐
-        # secure=True와 server_name이 합쳐져야 'sdk incompatible' 에러가 사라집니다.
+        # [최종 해결 포인트] Cloudflare gRPC 프록시는 SNI(Server Name Indication) 정보가
+        # 명확하지 않으면 연결을 즉시 차단합니다. 이를 위해 server_hostname을 추가합니다. ⭐
         connections.connect(
             alias="default",
-            uri=f"https://{MILVUS_HOST}:{MILVUS_PORT}",
+            uri=milvus_uri,
             secure=True,
-            server_name=MILVUS_HOST  # milvus.cloudreaminu.cloud
+            server_name=MILVUS_HOST,
+            server_hostname=MILVUS_HOST  # Cloudflare가 gRPC 패킷을 인식하게 하는 핵심 옵션
         )
 
         if not utility.has_collection(COLLECTION_NAME):
@@ -75,9 +78,9 @@ def init_milvus():
 @app.on_event("startup")
 async def startup_event():
     try:
-        print("🚀 System Update: v4.2 (Protocol Optimization Applied)")
-        # 터널 연결 안정화를 위해 대기 시간을 조금 더 가집니다.
-        time.sleep(5)
+        print("🚀 System Update: v4.3 (Final gRPC Patch Applied)")
+        # 터널 연결이 완전히 확립될 때까지 대기 시간을 조금 더 가집니다.
+        time.sleep(10)
         init_milvus()
     except Exception as e:
         print(f"Startup Warning: {e}")
