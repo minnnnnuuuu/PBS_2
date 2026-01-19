@@ -3,7 +3,7 @@ name: Build and Push to ECR (Website)
 on:
   push:
     branches: [ "main" ]
-    # 관련 폴더의 파일이 바뀔 때만 실행되도록 경로를 지정합니다.
+    # 웹 소스나 배포 설정이 바뀔 때 실행
     paths:
       - 'website/**'
       - 'manifests/eks/**'
@@ -33,10 +33,14 @@ jobs:
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: web-latest
       run: |
-        # website/ 폴더 안의 소스를 사용하여 빌드합니다.
+        # website/ 폴더 안의 소스를 사용하여 빌드
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG website/
-        
-        # 빌드된 웹 이미지를 전송합니다.
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        
-        echo "✅ 웹사이트 이미지(web-latest) 전송 완료!"
+        echo "✅ 웹사이트 이미지(web-latest) 전송 완료!" 
+
+    - name: 5. EKS 웹 배포 갱신 (Rollout Restart)
+      run: |
+        aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
+        # pbs-web 배포가 새 이미지를 가져오도록 재시작
+        kubectl rollout restart deployment pbs-web
+        echo "🚀 웹사이트 서비스 갱신 완료!"

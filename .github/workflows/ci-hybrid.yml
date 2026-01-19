@@ -34,9 +34,11 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "✅ AI 엔진 이미지(ai-latest) 전송 완료!"
 
-    - name: 5. EKS 배포 갱신 (Rollout Restart)
+    - name: 5. EKS AI 배포 갱신 (Rollout Restart)
       run: |
         aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
-        # [수정] 이름을 hybrid-ai-service로 정확히 지정하여 NotFound 에러를 해결합니다.
+        # hybrid-ai-service 이름을 정확히 지정하여 배포 갱신
         kubectl rollout restart deployment hybrid-ai-service
+        echo "🚀 하이브리드 AI 서비스 갱신 완료!"

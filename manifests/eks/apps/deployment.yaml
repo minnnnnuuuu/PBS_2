@@ -2,33 +2,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pbs-app-deployment
+  name: hybrid-ai-service
   namespace: default
+  labels:
+    app: hybrid-ai
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: pbs-app
+      app: hybrid-ai
   template:
     metadata:
       labels:
-        app: pbs-app
+        app: hybrid-ai
     spec:
       serviceAccountName: hybrid-ai-sa
       containers:
-      - name: pbs-app
+      - name: ai-app
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
         env:
-          - name: MILVUS_ADDR
-            # [수정] 온프레미스 Milvus 서버 IP 사용
-            value: "192.168.10.70:19530"
-          - name: OLLAMA_ADDR
-            # [수정] 온프레미스 Ollama 주소 사용 (엔드포인트 경로 제외)
-            value: "http://api.cloudreaminu.cloud"
-        # ArgoCD 상태 체크를 위한 설정
+          - name: OLLAMA_URL
+            value: "https://api.cloudreaminu.cloud"
+          - name: MILVUS_HOST
+            value: "milvus.cloudreaminu.cloud"
+          - name: MILVUS_PORT
+            value: "443"
+          - name: S3_BUCKET_NAME
+            value: "pbs-project-ai-data-dev-v1"
+          - name: AWS_REGION
+            value: "ap-northeast-2"
         livenessProbe:
           httpGet:
             path: /health
@@ -38,16 +43,16 @@ spec:
           httpGet:
             path: /health
             port: 80
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: pbs-app-service
+  name: hybrid-ai-service
   namespace: default
 spec:
   selector:
-    app: pbs-app
+    app: hybrid-ai
   ports:
     - protocol: TCP
       port: 80
@@ -58,25 +63,28 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pbs-web-service
+  name: pbs-web
   namespace: default
+  labels:
+    app: pbs-web
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: pbs-web-service
+      app: pbs-web
   template:
     metadata:
       labels:
-        app: pbs-web-service
+        app: pbs-web
     spec:
       containers:
       - name: web-container
+        # [중요] web-latest 태그를 사용해야 ImagePull 에러가 안 납니다.
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
-        livenessProbe:
+        readinessProbe:
           httpGet:
             path: /
             port: 80
@@ -89,9 +97,9 @@ metadata:
   namespace: default
 spec:
   selector:
-    app: pbs-web-service
+    app: pbs-web
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
-  type: LoadBalancer
+  type: ClusterIP
