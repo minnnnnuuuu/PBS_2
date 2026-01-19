@@ -30,7 +30,7 @@ jobs:
     - name: 4. AI 엔진 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        # [테라폼 일치] ai_engine_repo 이름인 pbs-project-repo 사용 ⭐
+        # [테라폼 일치] ai_engine_repo 이름인 pbs-project-repo 사용
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: ai-latest
       run: |
