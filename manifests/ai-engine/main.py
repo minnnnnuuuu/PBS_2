@@ -13,7 +13,8 @@ app = FastAPI()
 # 1. 환경 설정
 # =========================================================
 OLLAMA_URL = os.getenv("OLLAMA_URL", "https://api.cloudreaminu.cloud")
-MILVUS_HOST = os.getenv("MILVUS_HOST", "milvus-standalone")
+# MILVUS_HOST는 YAML에서 192.168.10.70으로 주입되지만, 기본값도 변경해두면 안전합니다.
+MILVUS_HOST = os.getenv("MILVUS_HOST", "192.168.10.70")
 MILVUS_PORT = "19530"
 S3_BUCKET = os.getenv("S3_BUCKET_NAME", "pbs-project-ai-data-dev-v1")
 AWS_REGION = "ap-northeast-2"
@@ -80,7 +81,6 @@ async def get_embedding(text: str):
             resp = await client.post(
                 f"{OLLAMA_URL}/api/embeddings",
                 json={"model": EMBEDDING_MODEL, "prompt": text},
-                # [수정] 타임아웃 10초 -> 60초로 증가 (모델 로딩 시간 확보)
                 timeout=60.0
             )
             if resp.status_code != 200:
@@ -94,7 +94,6 @@ async def get_embedding(text: str):
 
 async def get_summary(text: str):
     prompt = f"아래 문서를 한 문장(50자 이내)으로 요약해줘:\n\n{text[:2000]}"
-    # [수정] 요약 타임아웃 30초 -> 120초로 증가
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
             resp = await client.post(f"{OLLAMA_URL}/api/generate",
@@ -105,11 +104,17 @@ async def get_summary(text: str):
             print(f"Summary Error: {e}")
             return "요약 생성 실패"
 
+# --- [수정된 부분 시작] ---
+@app.get("/health")
+def health_check():
+    """쿠버네티스 Readiness Probe를 위한 경로"""
+    return {"status": "ok"}
 
 @app.get("/")
-def health_check():
+def root():
+    """기본 루트 경로"""
     return {"status": "ok", "message": "PBS AI Backend Running"}
-
+# --- [수정된 부분 끝] ---
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -175,7 +180,6 @@ async def chat(request: QueryRequest):
         if not context:
             return {"answer": "관련된 문서를 찾을 수 없습니다.", "context": ""}
 
-        # [수정] 채팅 타임아웃 60초 -> 120초로 증가
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(f"{OLLAMA_URL}/api/generate",
                                      json={
