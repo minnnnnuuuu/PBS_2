@@ -14,7 +14,8 @@ metadata:
   labels:
     app: hybrid-ai
 spec:
-  replicas: 1
+  # [수정] hpa.yaml의 minReplicas가 2이므로 2로 맞춥니다.
+  replicas: 2
   selector:
     matchLabels:
       app: hybrid-ai
@@ -22,6 +23,8 @@ spec:
     metadata:
       labels:
         app: hybrid-ai
+      annotations:
+        proxy.istio.io/config: '{ "holdApplicationUntilProxyReceivesConfig": true }'
     spec:
       serviceAccountName: hybrid-ai-sa
       containers:
@@ -32,13 +35,14 @@ spec:
             - containerPort: 80
           env:
             - name: OLLAMA_URL
-              value: "http://api.cloudreaminu.cloud"
+              value: "https://api.cloudreaminu.cloud"
             - name: MILVUS_HOST
-              # 온프레미스 Milvus 서버 주소
-              value: "192.168.10.70"
+              value: "milvus.cloudreaminu.cloud"
+            - name: MILVUS_PORT
+              # Cloudflare 터널 표준 보안 포트
+              value: "443"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
-          # [핵심 수정] 경로를 /health에서 /로 변경하여 404 에러 해결
           readinessProbe:
             httpGet:
               path: /
@@ -66,3 +70,5 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
+      # [수정] ArgoCD Sync를 위해 실제 할당된 포트를 명시합니다.
+      nodePort: 31184
