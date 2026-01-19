@@ -10,12 +10,14 @@ from pymilvus import connections, Collection, FieldSchema, CollectionSchema, Dat
 app = FastAPI()
 
 # =========================================================
-# 1. 환경 설정
+# 1. 환경 설정 (수정됨)
 # =========================================================
 OLLAMA_URL = os.getenv("OLLAMA_URL", "https://api.cloudreaminu.cloud")
-# MILVUS_HOST는 YAML에서 192.168.10.70으로 주입되지만, 기본값도 변경해두면 안전합니다.
-MILVUS_HOST = os.getenv("MILVUS_HOST", "192.168.10.70")
+
+# [중요 수정] EKS 외부에서도 접속 가능하도록 Cloudflare 터널 주소를 기본값으로 설정합니다.
+MILVUS_HOST = os.getenv("MILVUS_HOST", "milvus.cloudreaminu.cloud")
 MILVUS_PORT = "19530"
+
 S3_BUCKET = os.getenv("S3_BUCKET_NAME", "pbs-project-ai-data-dev-v1")
 AWS_REGION = "ap-northeast-2"
 
@@ -30,7 +32,15 @@ def init_milvus():
     """Milvus 연결 및 컬렉션 초기화"""
     try:
         print(f"🔄 Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
-        connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
+
+        # [중요 수정] 터널 환경에서 gRPC 연결 안정성을 위해 설정을 보강합니다.
+        # secure=False는 터널이 SSL을 처리하므로 내부 SDK 레벨에서는 중복 보안을 피하기 위함입니다.
+        connections.connect(
+            alias="default",
+            host=MILVUS_HOST,
+            port=MILVUS_PORT,
+            secure=False  # Cloudflare Tunnel 환경에서 연결 성공률을 높입니다.
+        )
 
         if not utility.has_collection(COLLECTION_NAME):
             print(f"🆕 Creating collection: {COLLECTION_NAME}")
@@ -54,6 +64,7 @@ def init_milvus():
         else:
             print(f"ℹ️ Collection '{COLLECTION_NAME}' already exists.")
 
+        # 컬렉션을 메모리에 로드
         Collection(COLLECTION_NAME).load()
         print("✅ Milvus Connected & Collection Loaded!")
 
@@ -64,7 +75,8 @@ def init_milvus():
 @app.on_event("startup")
 async def startup_event():
     try:
-        print("🚀 System Update: v4.0 (Increased Timeouts)")
+        print("🚀 System Update: v4.0 (Enhanced Connectivity)")
+        # Milvus가 완전히 뜰 때까지 대기 시간을 조금 더 줍니다.
         time.sleep(5)
         init_milvus()
     except Exception as e:
@@ -104,17 +116,18 @@ async def get_summary(text: str):
             print(f"Summary Error: {e}")
             return "요약 생성 실패"
 
-# --- [수정된 부분 시작] ---
+
 @app.get("/health")
 def health_check():
     """쿠버네티스 Readiness Probe를 위한 경로"""
     return {"status": "ok"}
 
+
 @app.get("/")
 def root():
     """기본 루트 경로"""
     return {"status": "ok", "message": "PBS AI Backend Running"}
-# --- [수정된 부분 끝] ---
+
 
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -134,6 +147,7 @@ async def upload_file(file: UploadFile = File(...)):
             summary = await get_summary(text_content)
             vector = await get_embedding(text_content)
 
+            # 연결 확인 로직 보강
             if vector and connections.has_connection("default"):
                 collection = Collection(COLLECTION_NAME)
                 data = [
@@ -159,6 +173,10 @@ async def chat(request: QueryRequest):
     try:
         query_vector = await get_embedding(request.query)
         if not query_vector: return {"answer": "AI 엔진 연결 실패 (임베딩 불가)"}
+
+        # 연결 끊김 방지를 위해 매번 alias 확인 및 필요시 로드
+        if not connections.has_connection("default"):
+            init_milvus()
 
         collection = Collection(COLLECTION_NAME)
         collection.load()
@@ -193,6 +211,7 @@ async def chat(request: QueryRequest):
 
     except Exception as e:
         print(f"Chat Error: {e}")
+        # 구체적인 에러 메시지를 반환하여 디버깅을 돕습니다.
         return {"answer": f"에러가 발생했습니다: {str(e)}", "context": ""}
 
 
