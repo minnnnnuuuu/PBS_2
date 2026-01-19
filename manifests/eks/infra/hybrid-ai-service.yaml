@@ -22,9 +22,7 @@ spec:
     metadata:
       labels:
         app: hybrid-ai
-      # [최적화] 도메인 기반 통신을 위해 기존 IP 예외 설정은 주석 처리합니다. ⭐
       annotations:
-        # traffic.sidecar.istio.io/excludeOutboundIPRanges: "192.168.10.70/32"
         proxy.istio.io/config: '{ "holdApplicationUntilProxyReceivesConfig": true }'
     spec:
       serviceAccountName: hybrid-ai-sa
@@ -40,8 +38,7 @@ spec:
             - name: MILVUS_HOST
               value: "milvus.cloudreaminu.cloud"
             - name: MILVUS_PORT
-              # [중요 수정] Cloudflare 터널은 19530 포트를 직접 열어주지 않습니다.
-              # 표준 HTTPS 포트인 443을 사용하여 터널을 통과하도록 설정합니다. ⭐
+              # Cloudflare 표준 보안 포트 사용
               value: "443"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"

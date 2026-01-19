@@ -10,14 +10,13 @@ from pymilvus import connections, Collection, FieldSchema, CollectionSchema, Dat
 app = FastAPI()
 
 # =========================================================
-# 1. 환경 설정 (수정됨)
+# 1. 환경 설정
 # =========================================================
 OLLAMA_URL = os.getenv("OLLAMA_URL", "https://api.cloudreaminu.cloud")
 
-# [수정] MILVUS_HOST와 PORT 모두 쿠버네티스 환경 변수에서 읽어오도록 합니다.
+# 환경 변수로부터 Milvus 접속 정보를 읽어옵니다.
 MILVUS_HOST = os.getenv("MILVUS_HOST", "milvus.cloudreaminu.cloud")
-# [핵심 수정] "19530"으로 고정하지 않고 YAML의 "443"을 가져옵니다.
-MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
+MILVUS_PORT = os.getenv("MILVUS_PORT", "443")
 
 S3_BUCKET = os.getenv("S3_BUCKET_NAME", "pbs-project-ai-data-dev-v1")
 AWS_REGION = "ap-northeast-2"
@@ -34,12 +33,14 @@ def init_milvus():
     try:
         print(f"🔄 Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
 
-        # [중요 수정] 443번 포트(HTTPS)를 통해 터널에 접속할 때는 반드시 secure=True여야 합니다.
+        # [최종 수정] secure=True와 함께 server_name을 반드시 명시해야
+        # Cloudflare의 gRPC 프록시를 정상적으로 통과할 수 있습니다. ⭐
         connections.connect(
             alias="default",
             host=MILVUS_HOST,
             port=MILVUS_PORT,
-            secure=True  # Cloudflare Tunnel의 443 포트는 보안 연결(TLS)이 필수입니다.
+            secure=True,
+            server_name="milvus.cloudreaminu.cloud" # gRPC TLS 인증용 도메인 명시
         )
 
         if not utility.has_collection(COLLECTION_NAME):
@@ -75,8 +76,7 @@ def init_milvus():
 @app.on_event("startup")
 async def startup_event():
     try:
-        print("🚀 System Update: v4.0 (Enhanced Connectivity)")
-        # Milvus가 완전히 뜰 때까지 대기 시간을 조금 더 줍니다.
+        print("🚀 System Update: v4.1 (Secure gRPC Connectivity)")
         time.sleep(5)
         init_milvus()
     except Exception as e:
@@ -119,13 +119,11 @@ async def get_summary(text: str):
 
 @app.get("/health")
 def health_check():
-    """쿠버네티스 Readiness Probe를 위한 경로"""
     return {"status": "ok"}
 
 
 @app.get("/")
 def root():
-    """기본 루트 경로"""
     return {"status": "ok", "message": "PBS AI Backend Running"}
 
 
@@ -133,7 +131,6 @@ def root():
 async def upload_file(file: UploadFile = File(...)):
     try:
         content = await file.read()
-
         try:
             text_content = content.decode("utf-8")
         except UnicodeDecodeError:
@@ -147,15 +144,9 @@ async def upload_file(file: UploadFile = File(...)):
             summary = await get_summary(text_content)
             vector = await get_embedding(text_content)
 
-            # 연결 확인 로직 보강
             if vector and connections.has_connection("default"):
                 collection = Collection(COLLECTION_NAME)
-                data = [
-                    [vector],  # embedding
-                    [text_content],  # text
-                    [file.filename],  # filename
-                    [summary]  # summary
-                ]
+                data = [[vector], [text_content], [file.filename], [summary]]
                 collection.insert(data)
                 collection.flush()
                 print(f"✅ Document '{file.filename}' indexed.")
@@ -174,7 +165,6 @@ async def chat(request: QueryRequest):
         query_vector = await get_embedding(request.query)
         if not query_vector: return {"answer": "AI 엔진 연결 실패 (임베딩 불가)"}
 
-        # 연결 끊김 방지를 위해 매번 alias 확인 및 필요시 로드
         if not connections.has_connection("default"):
             init_milvus()
 
@@ -194,7 +184,6 @@ async def chat(request: QueryRequest):
                     context_texts.append(hit.entity.get("text"))
 
         context = "\n\n".join(context_texts) if context_texts else ""
-
         if not context:
             return {"answer": "관련된 문서를 찾을 수 없습니다.", "context": ""}
 
@@ -211,7 +200,6 @@ async def chat(request: QueryRequest):
 
     except Exception as e:
         print(f"Chat Error: {e}")
-        # 구체적인 에러 메시지를 반환하여 디버깅을 돕습니다.
         return {"answer": f"에러가 발생했습니다: {str(e)}", "context": ""}
 
 
@@ -237,7 +225,6 @@ def download_file(filename: str):
     try:
         file_obj = s3_client.get_object(Bucket=S3_BUCKET, Key=filename)
         content = file_obj['Body'].read()
-
         try:
             decoded_content = content.decode('utf-8')
             return Response(content=decoded_content, media_type="text/plain")
@@ -247,7 +234,6 @@ def download_file(filename: str):
                 media_type="application/octet-stream",
                 headers={"Content-Disposition": f"attachment; filename={filename}"}
             )
-
     except Exception as e:
         print(f"Download Error: {e}")
         raise HTTPException(status_code=404, detail="File not found in S3")
