@@ -3,7 +3,6 @@ name: Hybrid Service Build and Push (AI Engine)
 on:
   push:
     branches: [ "main" ]
-    # AI 엔진 소스나 인프라 설정이 바뀔 때 모두 작동하도록 경로를 확장했습니다.
     paths:
       - 'manifests/ai-engine/**'
       - 'manifests/eks/infra/**'
@@ -30,11 +29,9 @@ jobs:
     - name: 4. AI 엔진 이미지 빌드 및 전송 (Push)
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        # [테라폼 일치] ai_engine_repo 이름인 pbs-project-repo 사용
         ECR_REPOSITORY: pbs-project-repo
         IMAGE_TAG: ai-latest
       run: |
-        # manifests/ai-engine 폴더의 Dockerfile을 사용하여 빌드
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "✅ pbs-project-repo 창고에 ai-latest 입고 완료!"
@@ -42,6 +39,6 @@ jobs:
     - name: 5. EKS 배포 갱신 (Rollout Restart)
       run: |
         aws eks update-kubeconfig --region ap-northeast-2 --name pbs-project-dev-cluster
-        # 새로운 이미지를 즉시 반영하도록 명령
+        # [수정] 위 YAML 파일의 metadata.name과 동일하게 설정합니다.
         kubectl rollout restart deployment hybrid-ai-service
         echo "🚀 EKS 하이브리드 서비스 갱신 완료!"

@@ -9,12 +9,13 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  # [중요] 배포 이름을 hybrid-ai-service로 통일합니다.
   name: hybrid-ai-service
   namespace: default
   labels:
     app: hybrid-ai
 spec:
-  # [수정] hpa.yaml의 minReplicas가 2이므로 2로 맞춥니다.
+  # HPA 설정(min 2)과 일치시켜 노란색 경고를 없앱니다.
   replicas: 2
   selector:
     matchLabels:
@@ -39,7 +40,6 @@ spec:
             - name: MILVUS_HOST
               value: "milvus.cloudreaminu.cloud"
             - name: MILVUS_PORT
-              # Cloudflare 터널 표준 보안 포트
               value: "443"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
@@ -70,5 +70,5 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-      # [수정] ArgoCD Sync를 위해 실제 할당된 포트를 명시합니다.
+      # 실제 할당된 포트를 명시하여 ArgoCD Sync를 유지합니다.
       nodePort: 31184
