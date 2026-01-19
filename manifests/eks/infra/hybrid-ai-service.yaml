@@ -1,4 +1,3 @@
-# 1. AI 엔진용 신분증 (ServiceAccount)
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -7,7 +6,6 @@ metadata:
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::198011705652:role/hybrid-ai-sa-role
 ---
-# 2. AI 엔진 실행 설정 (Deployment)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,20 +31,19 @@ spec:
           ports:
             - containerPort: 80
           env:
-            # [수정] 온프레미스 Ollama 주소 (엔드포인트 경로 제외)
             - name: OLLAMA_URL
               value: "http://api.cloudreaminu.cloud"
-            # [수정] 온프레미스 Milvus 서버 IP로 변경 ⭐
             - name: MILVUS_HOST
+              # 온프레미스 Milvus 서버 주소
               value: "192.168.10.70"
             - name: S3_BUCKET_NAME
               value: "pbs-project-ai-data-dev-v1"
-          # [추가] ArgoCD Healthy 상태 확인용
+          # [핵심 수정] 경로를 /health에서 /로 변경하여 404 에러 해결
           readinessProbe:
             httpGet:
-              path: /health
+              path: /
               port: 80
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
           resources:
             requests:
@@ -56,7 +53,6 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 ---
-# 3. 서비스 연결 통로 (Service)
 apiVersion: v1
 kind: Service
 metadata:
