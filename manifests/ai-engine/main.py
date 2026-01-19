@@ -14,9 +14,10 @@ app = FastAPI()
 # =========================================================
 OLLAMA_URL = os.getenv("OLLAMA_URL", "https://api.cloudreaminu.cloud")
 
-# [중요 수정] EKS 외부에서도 접속 가능하도록 Cloudflare 터널 주소를 기본값으로 설정합니다.
+# [수정] MILVUS_HOST와 PORT 모두 쿠버네티스 환경 변수에서 읽어오도록 합니다.
 MILVUS_HOST = os.getenv("MILVUS_HOST", "milvus.cloudreaminu.cloud")
-MILVUS_PORT = "19530"
+# [핵심 수정] "19530"으로 고정하지 않고 YAML의 "443"을 가져옵니다.
+MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
 
 S3_BUCKET = os.getenv("S3_BUCKET_NAME", "pbs-project-ai-data-dev-v1")
 AWS_REGION = "ap-northeast-2"
@@ -33,13 +34,12 @@ def init_milvus():
     try:
         print(f"🔄 Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
 
-        # [중요 수정] 터널 환경에서 gRPC 연결 안정성을 위해 설정을 보강합니다.
-        # secure=False는 터널이 SSL을 처리하므로 내부 SDK 레벨에서는 중복 보안을 피하기 위함입니다.
+        # [중요 수정] 443번 포트(HTTPS)를 통해 터널에 접속할 때는 반드시 secure=True여야 합니다.
         connections.connect(
             alias="default",
             host=MILVUS_HOST,
             port=MILVUS_PORT,
-            secure=False  # Cloudflare Tunnel 환경에서 연결 성공률을 높입니다.
+            secure=True  # Cloudflare Tunnel의 443 포트는 보안 연결(TLS)이 필수입니다.
         )
 
         if not utility.has_collection(COLLECTION_NAME):
