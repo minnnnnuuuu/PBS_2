@@ -17,23 +17,42 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
       - name: pbs-app
-        # [통일] pbs-project-repo 창고의 ai-latest 사용 ⭐
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
         env:
           - name: MILVUS_ADDR
-            value: "milvus-standalone.default.svc.cluster.local:19530"
+            # [수정] 온프레미스 Milvus 서버 IP 사용
+            value: "192.168.10.70:19530"
           - name: OLLAMA_ADDR
-            value: "http://api.cloudreaminu.cloud/ai"
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "256Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
+            # [수정] 온프레미스 Ollama 주소 사용 (엔드포인트 경로 제외)
+            value: "http://api.cloudreaminu.cloud"
+        # ArgoCD 상태 체크를 위한 설정
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pbs-app-service
+  namespace: default
+spec:
+  selector:
+    app: pbs-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
 ---
 # 2. 웹 서비스 (Frontend)
 apiVersion: apps/v1
@@ -53,8 +72,26 @@ spec:
     spec:
       containers:
       - name: web-container
-        # [통일] pbs-project-repo 창고의 web-latest 사용 ⭐
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pbs-web-service
+  namespace: default
+spec:
+  selector:
+    app: pbs-web-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
