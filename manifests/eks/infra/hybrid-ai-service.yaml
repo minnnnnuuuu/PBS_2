@@ -9,13 +9,13 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  # [중요] 배포 이름을 hybrid-ai-service로 통일합니다.
+  # [이름 통일] 클러스터와 CI/CD가 인식할 공식 이름입니다.
   name: hybrid-ai-service
   namespace: default
   labels:
     app: hybrid-ai
 spec:
-  # HPA 설정(min 2)과 일치시켜 노란색 경고를 없앱니다.
+  # hpa.yaml의 minReplicas가 2이므로 2로 설정하여 충돌을 방지합니다.
   replicas: 2
   selector:
     matchLabels:
@@ -49,13 +49,6 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 10
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "256Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -70,5 +63,5 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
-      # 실제 할당된 포트를 명시하여 ArgoCD Sync를 유지합니다.
+      # [Sync 유지] ArgoCD 상태 일치를 위해 할당된 포트를 명시합니다.
       nodePort: 31184
