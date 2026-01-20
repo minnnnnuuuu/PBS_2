@@ -9,12 +9,12 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    # [수정] infra -> apps로 경로를 확정하여 동기화 대상 일치 ⭐
+    # [수정] 배포 파일 위치를 apps 폴더로 지정 ⭐
     path: manifests/eks/apps
     repoURL: https://github.com/minnnnnuuuu/PBS_2.git
     targetRevision: HEAD
   syncPolicy:
-    # [수정] null 대신 자동 동기화(automated) 설정을 활성화하여 push 즉시 반영 ⭐
+    # [수정] 자동 동기화 활성화
     automated:
       prune: true
       selfHeal: true
@@ -30,6 +30,6 @@ spec:
     - /spec/template/spec/containers/0/env
   - group: apps
     kind: Deployment
-    name: pbs-app-deployment
+    name: pbs-web # [수정] Deployment 이름에 맞게 수정 ⭐
     jsonPointers:
     - /spec/template/spec/containers/0/env

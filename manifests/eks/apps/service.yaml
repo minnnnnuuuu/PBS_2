@@ -7,7 +7,7 @@ metadata:
   name: pbs-web-service
   namespace: default
 spec:
-  # [수정] pbs-web-service -> pbs-web (Deployment의 label과 일치) ⭐
+  # Deployment의 labels(app: pbs-web)와 일치시켜 503 에러를 해결합니다 ⭐
   selector:
     app: pbs-web
   ports:

@@ -23,7 +23,6 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
       - name: ai-app
-        # [수정] ECR 태그를 ai-latest로 고정
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
         imagePullPolicy: Always
         ports:
@@ -73,8 +72,7 @@ spec:
         sidecar.istio.io/inject: "true"
     spec:
       containers:
-      - name: web-container
-        # [수정] ECR 태그를 web-latest로 고정
+      - name: web-container # [수정] 중복 컨테이너를 제거하고 정상 태그를 가진 이것만 남깁니다 ⭐
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
