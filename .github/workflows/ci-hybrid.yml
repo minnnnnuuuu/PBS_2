@@ -29,7 +29,7 @@ jobs:
     - name: 4. AI 엔진 이미지 빌드 및 전송
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: pbs-project-repo
+        ECR_REPOSITORY: hybrid-service
         IMAGE_TAG: ai-latest
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./manifests/ai-engine
