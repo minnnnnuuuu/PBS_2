@@ -7,14 +7,13 @@ metadata:
   name: pbs-web-service
   namespace: default
 spec:
-  # Deployment의 labels(app: pbs-web)와 정확히 일치시켜야 503 에러가 해결됩니다 ⭐
+  # [수정] pbs-web-service -> pbs-web (Deployment의 label과 일치) ⭐
   selector:
     app: pbs-web
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
-  # Istio 가상 서비스를 사용하므로 ClusterIP가 가장 적합합니다.
   type: ClusterIP
 
 ---

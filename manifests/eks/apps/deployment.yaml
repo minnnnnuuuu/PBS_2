@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# 1. AI 중계 서비스 (Backend: hybrid-ai-service)
+# 1. AI 중계 서비스 (hybrid-ai-service)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -23,6 +23,7 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
       - name: ai-app
+        # [수정] ECR 태그를 ai-latest로 고정
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
         imagePullPolicy: Always
         ports:
@@ -50,7 +51,7 @@ spec:
           initialDelaySeconds: 10
 ---
 # ---------------------------------------------------------
-# 2. 웹 서비스 (Frontend: pbs-web)
+# 2. 웹 서비스 (pbs-web)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -73,6 +74,7 @@ spec:
     spec:
       containers:
       - name: web-container
+        # [수정] ECR 태그를 web-latest로 고정
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
