@@ -20,3 +20,4 @@ spec:
     name: pbs-app-deployment
     jsonPointers:
     - /spec/template/spec/containers/0/env
+# 깃
