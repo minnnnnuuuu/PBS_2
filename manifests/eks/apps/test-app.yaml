@@ -31,4 +31,4 @@ spec:
       targetPort: 80
   type: ClusterIP
 
-  #깃  푸시용
+  #깃 
