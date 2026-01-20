@@ -9,11 +9,14 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: manifests/eks/infra
+    # 실제 Deployment, Service 파일들이 있는 폴더 경로로 수정
+    path: manifests/eks/apps
     repoURL: https://github.com/minnnnnuuuu/PBS_2.git
     targetRevision: HEAD
   syncPolicy:
-    automated: null
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
     - CreateNamespace=true
     - ServerSideApply=true

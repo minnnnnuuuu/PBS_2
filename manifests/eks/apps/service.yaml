@@ -2,11 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pbs-web-service
+  namespace: default
 spec:
-  type: LoadBalancer
+  # Deployment.yaml의 spec.template.metadata.labels와 동일하게 맞춤
   selector:
-    app: pbs-web-service
+    app: pbs-web
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
+  # Istio VirtualService를 통해 통신하므로 내부 통신용인 ClusterIP로 충분합니다.
+  type: ClusterIP
