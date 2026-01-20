@@ -1,12 +1,13 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: hybrid-ai-hpa
+  name: pbs-web-hpa # 이름 변경 ⭐
+  namespace: default
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: hybrid-ai-service
+    name: pbs-web # 웹사이트 Deployment를 대상으로 지정 ⭐
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -15,4 +16,4 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 50 # CPU 50% 넘으면 파드 추가
+        averageUtilization: 50 # 웹사이트 CPU가 50% 넘으면 파드 추가
