@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# 1. AI 중계 서비스 (hybrid-ai-service)
+# 1. AI 중계 서비스 (Backend: hybrid-ai-service)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -29,7 +29,7 @@ spec:
         - containerPort: 80
         resources:
           requests:
-            cpu: "100m"    # [수정] 노드 자원 한계를 고려하여 100m로 최적화 ⭐
+            cpu: "100m"
             memory: "128Mi"
           limits:
             cpu: "200m"
@@ -57,7 +57,7 @@ spec:
           initialDelaySeconds: 10
 ---
 # ---------------------------------------------------------
-# 2. 웹 서비스 (pbs-web)
+# 2. 웹 서비스 (Frontend: pbs-web)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -79,14 +79,14 @@ spec:
         sidecar.istio.io/inject: "true"
     spec:
       containers:
-      - name: web-container
+      - name: web-container # [핵심] 오직 이 컨테이너 하나만 남겨야 합니다 ⭐
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
         resources:
           requests:
-            cpu: "100m"    # [수정] 동일하게 최적화 ⭐
+            cpu: "100m"
             memory: "128Mi"
           limits:
             cpu: "200m"
