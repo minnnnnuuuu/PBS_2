@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# 1. AI 중계 서비스 (Backend: hybrid-ai-service)
+# 1. AI 중계 서비스 (hybrid-ai-service)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -27,15 +27,13 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 80
-        # --- HPA 작동을 위한 리소스 설정 추가 ⭐ ---
         resources:
           requests:
-            cpu: "100m"    # HPA 계산의 기준점 (0.1 코어)
+            cpu: "100m"    # [수정] 노드 자원 한계를 고려하여 100m로 최적화 ⭐
             memory: "128Mi"
           limits:
-            cpu: "200m"    # 최대 사용 제한
+            cpu: "200m"
             memory: "256Mi"
-        # ---------------------------------------
         env:
           - name: OLLAMA_URL
             value: "https://api.cloudreaminu.cloud"
@@ -59,7 +57,7 @@ spec:
           initialDelaySeconds: 10
 ---
 # ---------------------------------------------------------
-# 2. 웹 서비스 (Frontend: pbs-web)
+# 2. 웹 서비스 (pbs-web)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -86,15 +84,13 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 80
-        # --- 웹 서비스에도 동일하게 리소스 설정 추가 ⭐ ---
         resources:
           requests:
-            cpu: "100m"
+            cpu: "100m"    # [수정] 동일하게 최적화 ⭐
             memory: "128Mi"
           limits:
             cpu: "200m"
             memory: "256Mi"
-        # -------------------------------------------
         readinessProbe:
           httpGet:
             path: /

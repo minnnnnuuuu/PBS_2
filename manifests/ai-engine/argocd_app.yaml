@@ -9,12 +9,10 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    # [수정] 배포 파일 위치를 apps 폴더로 지정 ⭐
     path: manifests/eks/apps
     repoURL: https://github.com/minnnnnuuuu/PBS_2.git
     targetRevision: HEAD
   syncPolicy:
-    # [수정] 자동 동기화 활성화
     automated:
       prune: true
       selfHeal: true
@@ -28,8 +26,10 @@ spec:
     name: hybrid-ai-service
     jsonPointers:
     - /spec/template/spec/containers/0/env
+    - /spec/replicas # [추가] HPA가 조절하는 파드 개수를 ArgoCD가 무시하도록 설정 ⭐
   - group: apps
     kind: Deployment
-    name: pbs-web # [수정] Deployment 이름에 맞게 수정 ⭐
+    name: pbs-web
     jsonPointers:
     - /spec/template/spec/containers/0/env
+    - /spec/replicas # [추가] 웹 서비스도 동일하게 적용 ⭐
