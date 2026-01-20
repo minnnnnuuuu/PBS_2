@@ -1,15 +1,36 @@
+# ---------------------------------------------------------
+# 1. 웹 서비스 전용 Service
+# ---------------------------------------------------------
 apiVersion: v1
 kind: Service
 metadata:
   name: pbs-web-service
   namespace: default
 spec:
-  # Deployment.yaml의 spec.template.metadata.labels와 동일하게 맞춤
+  # Deployment의 labels(app: pbs-web)와 정확히 일치시켜야 503 에러가 해결됩니다 ⭐
   selector:
     app: pbs-web
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
-  # Istio VirtualService를 통해 통신하므로 내부 통신용인 ClusterIP로 충분합니다.
+  # Istio 가상 서비스를 사용하므로 ClusterIP가 가장 적합합니다.
+  type: ClusterIP
+
+---
+# ---------------------------------------------------------
+# 2. AI 서비스 전용 Service
+# ---------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: hybrid-ai-service
+  namespace: default
+spec:
+  selector:
+    app: hybrid-ai
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
   type: ClusterIP
