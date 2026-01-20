@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# 1. AI 중계 서비스 (hybrid-ai-service)
+# 1. AI 중계 서비스 (Backend: hybrid-ai-service)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -27,6 +27,15 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 80
+        # --- HPA 작동을 위한 리소스 설정 추가 ⭐ ---
+        resources:
+          requests:
+            cpu: "100m"    # HPA 계산의 기준점 (0.1 코어)
+            memory: "128Mi"
+          limits:
+            cpu: "200m"    # 최대 사용 제한
+            memory: "256Mi"
+        # ---------------------------------------
         env:
           - name: OLLAMA_URL
             value: "https://api.cloudreaminu.cloud"
@@ -50,7 +59,7 @@ spec:
           initialDelaySeconds: 10
 ---
 # ---------------------------------------------------------
-# 2. 웹 서비스 (pbs-web)
+# 2. 웹 서비스 (Frontend: pbs-web)
 # ---------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -72,11 +81,20 @@ spec:
         sidecar.istio.io/inject: "true"
     spec:
       containers:
-      - name: web-container # [수정] 중복 컨테이너를 제거하고 정상 태그를 가진 이것만 남깁니다 ⭐
+      - name: web-container
         image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:web-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
+        # --- 웹 서비스에도 동일하게 리소스 설정 추가 ⭐ ---
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+        # -------------------------------------------
         readinessProbe:
           httpGet:
             path: /
