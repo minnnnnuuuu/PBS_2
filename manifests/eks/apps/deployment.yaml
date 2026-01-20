@@ -23,7 +23,7 @@ spec:
       serviceAccountName: hybrid-ai-sa
       containers:
       - name: ai-app
-        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/pbs-project-repo:ai-latest
+        image: 198011705652.dkr.ecr.ap-northeast-2.amazonaws.com/hybrid-service:ai-latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
